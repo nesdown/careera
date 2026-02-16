@@ -32,16 +32,16 @@ export default function CalendlyModal({ isOpen, onClose }) {
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="fixed inset-0 z-[101] pointer-events-none flex items-center justify-center p-0 sm:p-4">
-        <div className="pointer-events-auto relative w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-5xl bg-zinc-900 sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      {/* Modal - Full screen on mobile, large on desktop */}
+      <div className="fixed inset-0 z-[101] pointer-events-none flex items-start sm:items-center justify-center p-0 sm:p-4">
+        <div className="pointer-events-auto relative w-full h-full sm:w-[95vw] sm:h-[95vh] sm:max-w-6xl bg-zinc-900 sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-zinc-900 border-b border-zinc-800 shrink-0">
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg sm:text-xl font-bold text-white">
+              <h3 className="text-base sm:text-lg font-bold text-white">
                 Book Your Leadership Call
               </h3>
-              <p className="text-xs sm:text-sm text-zinc-400 mt-1 hidden sm:block">
+              <p className="text-xs sm:text-sm text-zinc-400 mt-0.5 hidden sm:block">
                 Let&apos;s discuss your career goals
               </p>
             </div>
@@ -54,16 +54,16 @@ export default function CalendlyModal({ isOpen, onClose }) {
             </button>
           </div>
 
-          {/* Calendly Container */}
-          <div className="flex-1 bg-black overflow-hidden">
+          {/* Calendly Container - Takes all remaining space */}
+          <div className="flex-1 min-h-0 bg-black">
             {/* Calendly inline widget */}
             <div 
-              className="calendly-inline-widget h-full w-full" 
+              className="calendly-inline-widget w-full h-full" 
               data-url="https://calendly.com/careera-roadmap/careera-roadmap-review?hide_gdpr_banner=1&background_color=000000&text_color=ffffff&primary_color=ffffff"
               style={{
-                minWidth: '320px',
+                width: '100%',
                 height: '100%',
-                minHeight: '630px'
+                minHeight: '100%'
               }}
             />
           </div>
