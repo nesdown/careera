@@ -1,40 +1,19 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { X } from "lucide-react";
 
 export default function CalendlyModal({ isOpen, onClose }) {
-  const widgetRef = useRef(null);
-  const calendlyUrl =
-    "https://calendly.com/careera-roadmap/careera-roadmap-review?hide_gdpr_banner=1";
-
   useEffect(() => {
     if (!isOpen) return;
 
+    // Prevent body scroll when modal is open
     document.body.style.overflow = "hidden";
     document.body.style.touchAction = "none";
 
-    const init = () => {
-      if (!widgetRef.current) return;
-      if (!window.Calendly || typeof window.Calendly.initInlineWidget !== "function") return;
-
-      // Avoid duplicated iframes on re-open.
-      widgetRef.current.innerHTML = "";
-      window.Calendly.initInlineWidget({
-        url: calendlyUrl,
-        parentElement: widgetRef.current,
-      });
-    };
-
-    const existing = document.querySelector(
-      'script[src="https://assets.calendly.com/assets/external/widget.js"]'
-    );
-
-    if (existing) {
-      init();
-    } else {
+    // Load Calendly widget script if not already loaded
+    if (!document.querySelector('script[src="https://assets.calendly.com/assets/external/widget.js"]')) {
       const script = document.createElement("script");
       script.src = "https://assets.calendly.com/assets/external/widget.js";
       script.async = true;
-      script.addEventListener("load", init, { once: true });
       document.body.appendChild(script);
     }
 
@@ -42,20 +21,24 @@ export default function CalendlyModal({ isOpen, onClose }) {
       document.body.style.overflow = "";
       document.body.style.touchAction = "";
     };
-  }, [isOpen, calendlyUrl]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm">
-      {/* Click-outside close only on desktop (prevents accidental closes on mobile) */}
+      {/* Click outside to close - desktop only */}
       <div className="absolute inset-0 hidden sm:block" onClick={onClose} />
 
+      {/* Modal Container */}
       <div className="relative mx-auto w-full h-[100dvh] sm:h-[90vh] sm:max-w-4xl sm:mt-[5vh] sm:rounded-3xl bg-zinc-900 border-0 sm:border sm:border-zinc-800 shadow-2xl overflow-hidden flex flex-col">
-        <div className="flex h-full flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-          <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-zinc-800 bg-zinc-900 shrink-0">
+        {/* Header */}
+        <div 
+          className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-zinc-800 bg-zinc-900 shrink-0"
+          style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+        >
           <div className="min-w-0 pr-3">
-            <h3 className="text-base sm:text-lg font-bold text-white truncate">
+            <h3 className="text-base sm:text-lg font-bold text-white">
               Book Your Call
             </h3>
             <p className="text-xs sm:text-sm text-zinc-400 mt-0.5 hidden sm:block">
@@ -69,17 +52,24 @@ export default function CalendlyModal({ isOpen, onClose }) {
           >
             <X className="w-5 h-5 text-zinc-400" />
           </button>
-          </div>
+        </div>
 
-          {/* Inline widget container (must have an explicit height) */}
-          <div className="flex-1 min-h-0 bg-[#1a1a1a]">
-            <div
-              ref={widgetRef}
-              className="calendly-inline-widget w-full h-full"
-              data-url={calendlyUrl}
-              style={{ minWidth: 320, height: "100%" }}
-            />
-          </div>
+        {/* Calendly Embed Container */}
+        <div 
+          className="flex-1 min-h-0 bg-white overflow-auto"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          {/* Calendly inline widget - using direct embed code */}
+          <div 
+            className="calendly-inline-widget" 
+            data-url="https://calendly.com/careera-roadmap/careera-roadmap-review?hide_gdpr_banner=1"
+            style={{ 
+              minWidth: '320px', 
+              width: '100%',
+              height: '100%',
+              minHeight: '600px'
+            }}
+          />
         </div>
       </div>
     </div>
