@@ -2,16 +2,16 @@ import { motion } from "framer-motion";
 
 export default function Logo({ className = "", size = "default" }) {
   const sizes = {
-    small: { width: 32, height: 32, orbitRadius: 10, moonRadius: 3, moonOffset: 10 },
-    default: { width: 40, height: 40, orbitRadius: 13, moonRadius: 4, moonOffset: 13 },
-    large: { width: 48, height: 48, orbitRadius: 16, moonRadius: 5, moonOffset: 16 },
+    small: { width: 28, height: 28, orbitRadius: 9, moonRadius: 2.5, moonOffset: 9, fontSize: '1.125rem' },
+    default: { width: 40, height: 40, orbitRadius: 13, moonRadius: 4, moonOffset: 13, fontSize: '1.375rem' },
+    large: { width: 48, height: 48, orbitRadius: 16, moonRadius: 5, moonOffset: 16, fontSize: '1.5rem' },
   };
 
-  const { width, height, orbitRadius, moonRadius, moonOffset } = sizes[size] || sizes.default;
+  const { width, height, orbitRadius, moonRadius, moonOffset, fontSize } = sizes[size] || sizes.default;
   const center = width / 2;
 
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
+    <div className={`flex items-center gap-2 sm:gap-3 ${className}`}>
       <motion.svg
         width={width}
         height={height}
@@ -59,12 +59,12 @@ export default function Logo({ className = "", size = "default" }) {
       </motion.svg>
       
       <span 
-        className="text-xl font-bold text-white tracking-tight"
+        className="text-base sm:text-xl font-bold text-white tracking-tight"
         style={{ 
           fontFamily: "'Space Grotesk', sans-serif", 
           letterSpacing: '-0.03em',
           fontWeight: 700,
-          fontSize: '1.375rem'
+          fontSize: fontSize
         }}
       >
         Careera

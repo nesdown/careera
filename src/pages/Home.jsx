@@ -28,7 +28,6 @@ import Navbar from "../components/Navbar";
 import QuestionnaireWidget from "../components/QuestionnaireWidget";
 import Logo from "../components/Logo";
 import LiveActivity from "../components/LiveActivity";
-import CountdownTimer from "../components/CountdownTimer";
 import CostOfWaiting from "../components/CostOfWaiting";
 
 const fadeInUp = {
@@ -193,15 +192,7 @@ function SuccessStory({ quote, name, role, achievement, beforeSalary, afterSalar
         <p className="text-zinc-300 mb-4 leading-relaxed italic">"{quote}"</p>
 
         <div className="flex items-center gap-4 pt-4 border-t border-zinc-800">
-          <div className="flex items-center gap-2 text-sm">
-            <TrendingUp className="w-4 h-4 text-white" />
-            <span className="text-zinc-400">
-              <span className="text-zinc-600 line-through">${beforeSalary}</span>
-              <ArrowRight className="w-3 h-3 inline mx-1" />
-              <span className="text-white font-semibold">${afterSalary}</span>
-            </span>
-          </div>
-          <div className="text-xs text-zinc-400 px-3 py-1 bg-zinc-800 rounded-full">
+          <div className="text-sm text-zinc-400 px-3 py-1 bg-zinc-800 rounded-full">
             {achievement}
           </div>
         </div>
@@ -221,7 +212,7 @@ function OldWayCard() {
       onHoverEnd={() => setIsHovered(false)}
       whileHover={{ y: -3 }}
       transition={{ duration: 0.3 }}
-      className="relative bg-gradient-to-br from-zinc-900 to-zinc-950 border-2 border-zinc-800 rounded-3xl p-8 overflow-hidden"
+      className="relative bg-gradient-to-br from-zinc-900 to-zinc-950 border-2 border-zinc-800 rounded-2xl sm:rounded-3xl p-5 sm:p-6 lg:p-8 overflow-hidden"
     >
       {/* Subtle darkening overlay on hover */}
       <motion.div
@@ -231,62 +222,62 @@ function OldWayCard() {
       />
 
       <div className="relative z-10">
-        <div className="absolute top-4 right-4 px-3 py-1 bg-zinc-800 border border-zinc-700 rounded-full text-xs text-zinc-400 font-semibold">
+        <div className="absolute top-3 right-3 sm:top-4 sm:right-4 px-2.5 sm:px-3 py-0.5 sm:py-1 bg-zinc-800 border border-zinc-700 rounded-full text-[10px] sm:text-xs text-zinc-400 font-semibold">
           Old Way
         </div>
 
-        <div className="mb-6">
-          <div className="w-12 h-12 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center mb-4">
-            <BarChart3 className="w-6 h-6 text-zinc-400" />
+        <div className="mb-5 sm:mb-6">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center mb-3 sm:mb-4">
+            <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-zinc-400" />
           </div>
-          <h3 className="text-2xl font-bold text-white mb-3">Still Waiting & Watching</h3>
-          <p className="text-sm text-zinc-500">While opportunities pass you by...</p>
+          <h3 className="text-xl sm:text-2xl font-bold text-white mb-2 sm:mb-3">Managing Tasks</h3>
+          <p className="text-xs sm:text-sm text-zinc-500">The reality without leadership training...</p>
         </div>
 
         {/* Pain Points */}
-        <ul className="space-y-3 mb-6">
+        <ul className="space-y-2 sm:space-y-3 mb-5 sm:mb-6">
           {[
-            "Sending 50+ applications with no responses",
-            "Watching less qualified people get promoted",
-            "Stuck at the same salary for 3+ years",
-            "No mentor, no plan, no progress",
-            "Another year saying 'maybe next year'",
+            "Promoted to manager, still doing IC work",
+            "Team not performing, don't know why",
+            "Avoiding tough conversations",
+            "Feel like an imposter in leadership meetings",
+            "Others get promoted, you stay stuck",
           ].map((item, i) => (
             <li
               key={i}
-              className="flex items-start gap-3 text-zinc-400"
+              className="flex items-start gap-2 sm:gap-3 text-xs sm:text-sm text-zinc-400"
             >
-              <div className="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center shrink-0 mt-0.5">
-                <div className="w-2 h-2 bg-zinc-600 rounded-full" />
+              <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-zinc-800 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-zinc-600 rounded-full" />
               </div>
               <span>{item}</span>
             </li>
           ))}
         </ul>
 
-        {/* Live "wasted time" counters */}
-        <div className="mt-6 pt-6 border-t border-zinc-800 space-y-3">
+        {/* Stats */}
+        <div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-zinc-800 space-y-2 sm:space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-zinc-500">Average time stuck</span>
-            <div className="text-2xl font-bold tabular-nums text-zinc-500">
-              30+ months
+            <span className="text-[10px] sm:text-xs text-zinc-500">Time to feel confident</span>
+            <div className="text-xl sm:text-2xl font-bold tabular-nums text-zinc-500">
+              3+ years
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-xs text-zinc-500">Opportunities you'll miss</span>
-            <div className="text-2xl font-bold tabular-nums text-zinc-500">
-              47+
+            <span className="text-[10px] sm:text-xs text-zinc-500">Team turnover</span>
+            <div className="text-xl sm:text-2xl font-bold tabular-nums text-zinc-500">
+              High
             </div>
           </div>
           <div className="pt-3 border-t border-zinc-800">
-            <div className="text-zinc-600 text-xs mb-1">Time to breakthrough</div>
-            <div className="text-3xl font-bold text-zinc-500">2.5+ years</div>
+            <div className="text-zinc-600 text-xs mb-1">Path forward</div>
+            <div className="text-3xl font-bold text-zinc-500">Unclear</div>
             <motion.p
               animate={{ opacity: isHovered ? 1 : 0 }}
               transition={{ duration: 0.3 }}
               className="text-xs text-zinc-600 mt-2"
             >
-              If you even make it...
+              Most never become true leaders
             </motion.p>
           </div>
         </div>
@@ -311,7 +302,7 @@ function NewWayCard() {
           ? "0 30px 80px rgba(255,255,255,0.12)"
           : "0 20px 60px rgba(255,255,255,0.05)",
       }}
-      className="relative bg-gradient-to-br from-white/5 to-zinc-900 border-2 border-white/20 rounded-3xl p-8 overflow-hidden"
+      className="relative bg-gradient-to-br from-white/5 to-zinc-900 border-2 border-white/20 rounded-2xl sm:rounded-3xl p-5 sm:p-6 lg:p-8 overflow-hidden"
     >
       {/* Animated glow on hover */}
       <motion.div
@@ -320,51 +311,51 @@ function NewWayCard() {
           scale: isHovered ? 1 : 0.8,
         }}
         transition={{ duration: 0.4 }}
-        className="absolute inset-0 bg-white rounded-3xl blur-3xl pointer-events-none"
+        className="absolute inset-0 bg-white rounded-2xl sm:rounded-3xl blur-3xl pointer-events-none"
       />
 
       <div className="relative z-10">
         {/* Badges */}
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4">
           <motion.div
             animate={{ scale: [1, 1.1, 1], opacity: [0.8, 1, 0.8] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="px-3 py-1 bg-white/10 border border-white/20 rounded-full text-xs text-white font-semibold flex items-center gap-1"
+            className="px-2.5 sm:px-3 py-0.5 sm:py-1 bg-white/10 border border-white/20 rounded-full text-[10px] sm:text-xs text-white font-semibold flex items-center gap-1"
           >
-            <Zap className="w-3 h-3" />
+            <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
             New Way
           </motion.div>
           <motion.div
             animate={{ opacity: [0.5, 1, 0.5] }}
             transition={{ duration: 1.5, repeat: Infinity }}
-            className="px-2 py-1 bg-white text-black rounded-full text-xs font-bold"
+            className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-white text-black rounded-full text-[10px] sm:text-xs font-bold"
           >
             POPULAR
           </motion.div>
         </div>
 
-        <div className="mb-6">
+        <div className="mb-5 sm:mb-6">
           <motion.div
             animate={{ 
               scale: isHovered ? [1, 1.1, 1] : 1,
             }}
             transition={{ duration: 0.5 }}
-            className="w-12 h-12 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center mb-4"
+            className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-white/10 border border-white/20 flex items-center justify-center mb-3 sm:mb-4"
           >
-            <Rocket className="w-6 h-6 text-white" />
+            <Rocket className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </motion.div>
-          <h3 className="text-2xl font-bold text-white mb-2">Your Clear Path Forward</h3>
-          <p className="text-sm text-zinc-400">Join the winners getting results</p>
+          <h3 className="text-xl sm:text-2xl font-bold text-white mb-1.5 sm:mb-2">Leading People</h3>
+          <p className="text-xs sm:text-sm text-zinc-400">With personalized career boost</p>
         </div>
 
         {/* Benefits */}
-        <ul className="space-y-3 mb-6">
+        <ul className="space-y-2 sm:space-y-3 mb-5 sm:mb-6">
           {[
-            "Personalized roadmap to YOUR exact dream role",
-            "1-on-1 mentorship from people who've made it",
-            "Weekly wins & accountability to stay on track",
-            "Proven framework used by 5,247 professionals",
-            "Land your goal in 6 months, not 2.5 years",
+            "5-min assessment → personalized plan",
+            "1-on-1 intro call to map your roadmap",
+            "Regular mentorship to hit your goals",
+            "Learn to lead, not just manage",
+            "Director/VP ready in under 3 months",
           ].map((item, i) => (
             <motion.li
               key={i}
@@ -372,27 +363,27 @@ function NewWayCard() {
                 x: isHovered ? 3 : 0,
               }}
               transition={{ delay: i * 0.03, duration: 0.3 }}
-              className="flex items-start gap-3 text-zinc-200"
+              className="flex items-start gap-2 sm:gap-3 text-xs sm:text-sm text-zinc-200"
             >
-              <CheckCircle className="w-5 h-5 text-white shrink-0 mt-0.5" />
+              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white shrink-0 mt-0.5" />
               <span className="font-medium">{item}</span>
             </motion.li>
           ))}
         </ul>
 
         {/* Live stats and urgency */}
-        <div className="mt-6 pt-6 border-t border-white/10 space-y-4">
+        <div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-white/10 space-y-3 sm:space-y-4">
           {/* Member counter */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-zinc-400">Success stories</span>
-            <div className="flex items-center gap-2">
+            <span className="text-[10px] sm:text-xs text-zinc-400">Leaders in program</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <motion.div
                 animate={{ opacity: [0.5, 1, 0.5] }}
                 transition={{ duration: 2, repeat: Infinity }}
-                className="w-2 h-2 rounded-full bg-white"
+                className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white"
               />
-              <div className="text-xl font-bold tabular-nums text-white">
-                5,247+
+              <div className="text-xl sm:text-xl font-bold tabular-nums text-white">
+                Growing
               </div>
             </div>
           </div>
@@ -405,41 +396,41 @@ function NewWayCard() {
                 : "rgba(255,255,255,0.2)",
             }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="p-3 bg-white/5 border-2 rounded-xl"
+            className="p-2.5 sm:p-3 bg-white/5 border-2 rounded-lg sm:rounded-xl"
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs text-zinc-400">Spots left this month</span>
-              <div className="text-2xl font-bold text-white tabular-nums">
-                12
+              <span className="text-[10px] sm:text-xs text-zinc-400">Next cohort</span>
+              <div className="text-base sm:text-lg font-bold text-white">
+                Starting Soon
               </div>
             </div>
             <motion.div
               animate={{ opacity: isHovered ? 1 : 0.7 }}
               transition={{ duration: 0.3 }}
-              className="mt-2 text-xs text-zinc-500"
+              className="text-[10px] sm:text-xs text-zinc-500 mt-1.5 sm:mt-2"
             >
-              ⚡ Filling fast - don't miss your chance
+              ⚡ Limited spots available
             </motion.div>
           </motion.div>
 
           {/* Time to breakthrough */}
-          <div className="pt-3">
-            <div className="text-zinc-400 text-xs mb-1">Average time to breakthrough</div>
-            <div className="flex items-center gap-3">
-              <div className="text-3xl font-bold text-white">6 months</div>
+          <div className="pt-2 sm:pt-3">
+            <div className="text-zinc-400 text-[10px] sm:text-xs mb-1">Time to confident leadership</div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="text-2xl sm:text-3xl font-bold text-white">&lt;3 months</div>
               <motion.div
                 animate={{ scale: isHovered ? [1, 1.1, 1] : 1 }}
                 transition={{ duration: 0.8, repeat: isHovered ? Infinity : 0 }}
-                className="px-2 py-1 bg-white/10 rounded-full text-sm text-white font-semibold"
+                className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-white/10 rounded-full text-xs sm:text-sm text-white font-semibold"
               >
-                -75% time
+                Fast-track
               </motion.div>
             </div>
             <motion.p
               animate={{ opacity: isHovered ? 1 : 0 }}
-              className="text-xs text-zinc-400 mt-2"
+              className="text-[10px] sm:text-xs text-zinc-400 mt-1.5 sm:mt-2"
             >
-              Start today, celebrate by summer
+              Become a respected leader, fast
             </motion.p>
           </div>
         </div>
@@ -472,7 +463,7 @@ function TimelineItem({ week, title, description, isActive }) {
 
       <div className="flex flex-col items-center">
         <motion.div
-          whileHover={{ scale: 1.2, rotate: 360 }}
+          whileHover={{ scale: 1.2 }}
           animate={{
             boxShadow: isHovered
               ? "0 0 30px rgba(255,255,255,0.3)"
@@ -494,7 +485,7 @@ function TimelineItem({ week, title, description, isActive }) {
           />
           <span className="relative z-10">{week}</span>
         </motion.div>
-        {week !== "6m" && (
+        {week !== "3+" && (
           <motion.div
             animate={{
               height: isHovered ? "80px" : "64px",
@@ -530,47 +521,52 @@ function TimelineItem({ week, title, description, isActive }) {
             scale: isHovered ? 1.02 : 1,
           }}
           transition={{ duration: 0.3 }}
-          className="text-lg font-semibold mb-1 origin-left"
+          className="text-lg font-semibold mb-2 origin-left"
         >
           {title}
         </motion.h4>
         
+        {/* Short description always visible */}
         <motion.p
-          animate={{
-            color: isHovered ? "#d4d4d8" : "#a1a1aa",
-          }}
-          transition={{ duration: 0.3 }}
-          className="text-sm"
+          className="text-sm text-zinc-400 mb-2"
         >
           {description}
         </motion.p>
 
-        {/* Progress indicator on hover */}
+        {/* Detailed text appears on hover */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, height: 0 }}
           animate={{
             opacity: isHovered ? 1 : 0,
-            y: isHovered ? 0 : 10,
+            height: isHovered ? "auto" : 0,
           }}
           transition={{ duration: 0.3, delay: 0.1 }}
-          className="mt-3 flex items-center gap-2"
+          className="overflow-hidden"
         >
-          <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: "0%" }}
-              animate={{ width: isHovered ? "100%" : "0%" }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="h-full bg-white rounded-full"
-            />
+          <div className="pt-2 border-t border-zinc-800 text-xs text-zinc-500 space-y-1">
+            {week === "1" && (
+              <>
+                <p>• Answer questions about your management situation</p>
+                <p>• Get insights into your leadership style</p>
+                <p>• Receive your personalized career boost roadmap</p>
+              </>
+            )}
+            {week === "2" && (
+              <>
+                <p>• Deep dive into your specific challenges</p>
+                <p>• Define clear, achievable milestones</p>
+                <p>• Establish your regular mentorship schedule</p>
+              </>
+            )}
+            {week === "3+" && (
+              <>
+                <p>• Work through real challenges as they arise</p>
+                <p>• Build leadership skills through practice</p>
+                <p>• Get accountability and guidance every step</p>
+                <p>• Adapt your plan as you grow and progress</p>
+              </>
+            )}
           </div>
-          <motion.span
-            initial={{ opacity: 0 }}
-            animate={{ opacity: isHovered ? 1 : 0 }}
-            transition={{ duration: 0.3, delay: 0.3 }}
-            className="text-xs text-white font-semibold whitespace-nowrap"
-          >
-            Learn more →
-          </motion.span>
         </motion.div>
       </motion.div>
     </motion.div>
@@ -589,34 +585,34 @@ export default function Home() {
 
   const successStories = [
     {
-      quote: "I was stuck at the same level for 3 years. After Careera, I got promoted in 4 months and doubled my salary. Wish I'd started sooner.",
-      name: "Sarah Chen",
-      role: "Senior Product Manager",
-      achievement: "+74% salary",
-      beforeSalary: "95K",
-      afterSalary: "165K",
-      image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=faces",
-      timeAgo: "3 weeks ago",
+      quote: "Building a startup while learning to lead was overwhelming. The structured approach helped me transition from doing everything myself to building and leading a team.",
+      name: "Margaryta Sivakova",
+      role: "Founder at LegalNodes",
+      achievement: "Built Leadership Team",
+      beforeSalary: "",
+      afterSalary: "",
+      image: "/src/assets/testimonial1.webp",
+      timeAgo: "Recently",
     },
     {
-      quote: "Every year I told myself 'next year I'll make the move.' Finally did it with Careera. Now I'm living the career I only dreamed about.",
-      name: "Marcus Johnson",
-      role: "Engineering Director",
-      achievement: "+100% salary",
-      beforeSalary: "140K",
-      afterSalary: "280K",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=faces",
-      timeAgo: "1 month ago",
+      quote: "Scaling a sales team is different from selling. The mentorship helped me develop the leadership skills to build high-performing teams and drive real results.",
+      name: "Valerie Teverovska",
+      role: "Head of Sales Development at Basis Theory",
+      achievement: "Scaled Team",
+      beforeSalary: "",
+      afterSalary: "",
+      image: "/src/assets/testimonial2.jpeg",
+      timeAgo: "Recently",
     },
     {
-      quote: "I watched my peers switch to tech for years while I stayed 'safe' in consulting. Biggest regret: not starting sooner. Careera made the impossible happen in 6 months.",
-      name: "Priya Patel",
-      role: "Tech Lead @ FAANG",
-      achievement: "+123% salary",
-      beforeSalary: "110K",
-      afterSalary: "245K",
-      image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&h=100&fit=crop&crop=faces",
-      timeAgo: "2 months ago",
+      quote: "Moving from IC to leading growth required a complete mindset shift. The career boost plan gave me clarity on how to lead strategically, not just execute.",
+      name: "Ilya Azovtsev",
+      role: "Head of Growth at Growth Band",
+      achievement: "Leadership Transition",
+      beforeSalary: "",
+      afterSalary: "",
+      image: "/src/assets/testimonial3.jpeg",
+      timeAgo: "Recently",
     },
   ];
 
@@ -665,103 +661,104 @@ export default function Home() {
       <Navbar />
       <LiveActivity />
 
-      {/* Hero Section - Enhanced */}
+      {/* Hero Section - Mobile Optimized */}
       <motion.section
         ref={heroRef}
         style={{ opacity, scale }}
-        className="pt-32 pb-20 px-6 relative"
+        className="pt-20 sm:pt-28 lg:pt-32 pb-12 sm:pb-16 lg:pb-20 px-4 sm:px-6 relative"
       >
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             {/* Left Column */}
             <motion.div
               initial="hidden"
               animate="visible"
               variants={stagger}
+              className="text-center lg:text-left"
             >
               <motion.div
                 variants={childFade}
-                className="flex flex-wrap items-center gap-3 mb-8"
+                className="flex flex-wrap items-center justify-center lg:justify-start gap-2 sm:gap-3 mb-6 sm:mb-8"
               >
                 <motion.div
                   animate={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-white/10 to-transparent border border-white/20 rounded-full px-4 py-2"
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-white/10 to-transparent border border-white/20 rounded-full px-3 sm:px-4 py-1.5 sm:py-2"
                 >
-                  <Sparkles className="w-4 h-4 text-white" />
-                  <span className="text-sm bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent font-semibold">
-                    5,247 Careers Transformed
+                  <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                  <span className="text-xs sm:text-sm bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent font-semibold">
+                    Building Tomorrow's Leaders
                   </span>
                 </motion.div>
-                <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1">
+                <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-2.5 sm:px-3 py-1">
                   <motion.div
                     animate={{ opacity: [0.5, 1, 0.5] }}
                     transition={{ duration: 2, repeat: Infinity }}
-                    className="w-2 h-2 rounded-full bg-white"
+                    className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white"
                   />
-                  <span className="text-xs text-zinc-400 font-medium">
-                    328 active this week
+                  <span className="text-[10px] sm:text-xs text-zinc-400 font-medium">
+                    New cohort starting soon
                   </span>
                 </div>
               </motion.div>
 
               <motion.h1
                 variants={childFade}
-                className="text-5xl md:text-7xl font-bold leading-[1.1] mb-6"
+                className="text-4xl sm:text-5xl lg:text-7xl font-bold leading-[1.1] mb-4 sm:mb-6"
               >
                 <span className="bg-gradient-to-r from-white via-white to-zinc-400 bg-clip-text text-transparent">
-                  Your Next Career Leap
+                  From Manager to
                 </span>
                 <br />
                 <span className="text-white">
-                  Starts in 5 Minutes
+                  Respected Leader
                 </span>
               </motion.h1>
 
               <motion.p
                 variants={childFade}
-                className="text-xl text-zinc-400 max-w-xl leading-relaxed mb-6"
+                className="text-base sm:text-lg lg:text-xl text-zinc-400 max-w-xl mx-auto lg:mx-0 leading-relaxed mb-6 sm:mb-8 px-2 sm:px-0"
               >
-                While others spend years stuck at the same level, you could be <span className="text-white font-semibold">promoted in 6 months</span>. Get the exact roadmap top performers use—backed by <span className="text-white font-semibold">5,000+ success stories</span>.
+                Get promoted—but never taught to lead? We'll create your <span className="text-white font-semibold">career boost plan</span>, build your leadership skills, and guide you to <span className="text-white font-semibold">better management</span>.
               </motion.p>
 
               <motion.div
                 variants={childFade}
-                className="inline-flex items-center gap-2 text-sm text-zinc-500 mb-8"
+                className="inline-flex items-center gap-2 text-xs sm:text-sm text-zinc-500 mb-6 sm:mb-8"
               >
-                <TrendingUp className="w-4 h-4" />
-                <span>Avg. $167K salary increase • 94% success rate • 6-month timeline</span>
+                <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="text-center lg:text-left">5-min assessment • Personalized roadmap • 1-on-1 mentorship</span>
               </motion.div>
 
               <motion.div
                 variants={childFade}
-                className="flex flex-wrap gap-6 mb-8"
+                className="flex flex-wrap gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8 justify-center lg:justify-start"
               >
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-white" />
-                  <span className="text-zinc-300 text-sm">No credit card required</span>
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  <span className="text-zinc-300 text-xs sm:text-sm">No credit card required</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-white" />
-                  <span className="text-zinc-300 text-sm">5-minute assessment</span>
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  <span className="text-zinc-300 text-xs sm:text-sm">5-minute assessment</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-white" />
-                  <span className="text-zinc-300 text-sm">Instant results</span>
+                  <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  <span className="text-zinc-300 text-xs sm:text-sm">Instant results</span>
                 </div>
               </motion.div>
             </motion.div>
 
             {/* Right Column - Questionnaire Widget */}
-            <div className="lg:sticky lg:top-24">
+            <div className="lg:sticky lg:top-24 mt-8 lg:mt-0">
               <QuestionnaireWidget />
             </div>
           </div>
         </div>
       </motion.section>
 
-      {/* Live Stats Banner */}
-      <section className="py-12 px-6 border-y border-zinc-800/50 bg-gradient-to-r from-zinc-900/50 to-transparent backdrop-blur-sm">
+      {/* Live Stats Banner - Mobile Optimized */}
+      <section className="py-8 sm:py-10 lg:py-12 px-4 sm:px-6 border-y border-zinc-800/50 bg-gradient-to-r from-zinc-900/50 to-transparent backdrop-blur-sm">
         <motion.div
           className="max-w-7xl mx-auto"
           initial="hidden"
@@ -769,33 +766,33 @@ export default function Home() {
           viewport={{ once: true }}
           variants={stagger}
         >
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {[
-              { value: 5247, label: "Careers Transformed", suffix: "+" },
-              { value: 328, label: "Active This Week", suffix: "" },
-              { value: 94, label: "Success Rate", suffix: "%" },
-              { value: 167, label: "Avg. Salary Increase", suffix: "K" },
+              { value: 100, label: "Leaders in Program", suffix: "+" },
+              { value: Math.floor(Math.random() * 21) + 10, label: "Started This Week", suffix: "" },
+              { value: 87, label: "Satisfaction Rate", suffix: "%" },
+              { value: 45, label: "Avg. Salary Increase", suffix: "K" },
             ].map((stat, i) => (
               <motion.div
                 key={stat.label}
                 variants={childFade}
                 className="text-center"
               >
-                <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent mb-2">
+                <div className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent mb-1 sm:mb-2">
                   <AnimatedCounter end={stat.value} suffix={stat.suffix} prefix={stat.value > 100 && stat.suffix === "K" ? "$" : ""} />
                 </div>
-                <div className="text-sm text-zinc-500">{stat.label}</div>
+                <div className="text-xs sm:text-sm text-zinc-500 leading-tight">{stat.label}</div>
               </motion.div>
             ))}
           </div>
         </motion.div>
       </section>
 
-      {/* The Problem (Visual Comparison) */}
-      <section className="py-32 px-6 relative">
+      {/* The Problem (Visual Comparison) - Mobile Optimized */}
+      <section className="py-16 sm:py-24 lg:py-32 px-4 sm:px-6 relative">
         <div className="max-w-7xl mx-auto">
           <motion.div
-            className="text-center mb-20"
+            className="text-center mb-12 sm:mb-16 lg:mb-20"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
@@ -804,25 +801,25 @@ export default function Home() {
             <motion.div
               animate={{ scale: [1, 1.02, 1] }}
               transition={{ duration: 3, repeat: Infinity }}
-              className="inline-block mb-6"
+              className="inline-block mb-4 sm:mb-6"
             >
-              <div className="px-5 py-2 bg-white/5 border border-white/10 rounded-full text-sm text-zinc-400">
-                <span className="text-white font-semibold">73%</span> of professionals feel stuck in their career
+              <div className="px-4 sm:px-5 py-1.5 sm:py-2 bg-white/5 border border-white/10 rounded-full text-xs sm:text-sm text-zinc-400">
+                <span className="text-white font-semibold">68%</span> of new managers feel unprepared for leadership
               </div>
             </motion.div>
-            <h2 className="text-4xl md:text-6xl font-bold text-white mb-6">
-              Stop Watching Others Get{" "}
+            <h2 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-white mb-4 sm:mb-6 px-2">
+              Stop Being Just{" "}
               <span className="italic">
-                Your Dream Job
+                A Manager
               </span>
             </h2>
-            <p className="text-xl text-zinc-400 max-w-3xl mx-auto">
-              While you're waiting for "the right time," <span className="text-white font-semibold">328 professionals started their transformation this week</span>. The gap between you and your goals is growing every day you delay.
+            <p className="text-base sm:text-lg lg:text-xl text-zinc-400 max-w-3xl mx-auto px-4 sm:px-6">
+              Learn to lead people, influence executives, and advance your career with personalized guidance.
             </p>
           </motion.div>
 
           <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto"
+            className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-5xl mx-auto"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
@@ -837,11 +834,11 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Success Stories */}
-      <section className="py-32 px-6 bg-gradient-to-b from-transparent via-zinc-900/30 to-transparent">
+      {/* Success Stories - Mobile Optimized */}
+      <section className="py-16 sm:py-24 lg:py-32 px-4 sm:px-6 bg-gradient-to-b from-transparent via-zinc-900/30 to-transparent">
         <div className="max-w-7xl mx-auto">
           <motion.div
-            className="text-center mb-16"
+            className="text-center mb-10 sm:mb-14 lg:mb-16"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
@@ -850,21 +847,21 @@ export default function Home() {
             <motion.div
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full mb-6"
+              className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/5 border border-white/10 rounded-full mb-4 sm:mb-6"
             >
-              <Star className="w-4 h-4 text-white fill-white" />
-              <span className="text-sm text-white font-semibold">Real Results from Real People</span>
+              <Star className="w-3 h-3 sm:w-4 sm:h-4 text-white fill-white" />
+              <span className="text-xs sm:text-sm text-white font-semibold">Real Leader Transformations</span>
             </motion.div>
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              They Were Exactly Where You Are Now
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4 px-2">
+              They Were Managers. Now They're Leaders.
             </h2>
-            <p className="text-xl text-zinc-400">
-              <span className="text-white font-semibold">6 months ago</span>, they felt stuck. Today, they're living your dream career.
+            <p className="text-base sm:text-lg lg:text-xl text-zinc-400 px-4">
+              <span className="text-white font-semibold">Under 3 months</span>—from struggling to confident, respected leadership.
             </p>
           </motion.div>
 
           <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+            className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
@@ -877,103 +874,134 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Results Visualization */}
-      <section className="py-32 px-6">
+      {/* Results Visualization - Mobile Optimized */}
+      <section className="py-16 sm:py-24 lg:py-32 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           <motion.div
-            className="text-center mb-20"
+            className="text-center mb-12 sm:mb-16 lg:mb-20"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
             variants={fadeInUp}
           >
-            <div className="inline-block mb-6 px-4 py-2 bg-white/5 border border-white/10 rounded-full text-sm">
-              <span className="text-zinc-400">What happens when </span>
-              <span className="text-white font-semibold">5,247 professionals</span>
-              <span className="text-zinc-400"> use Careera</span>
+            <div className="inline-block mb-4 sm:mb-6 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/5 border border-white/10 rounded-full text-xs sm:text-sm">
+              <span className="text-zinc-400">Real outcomes from </span>
+              <span className="text-white font-semibold">our members</span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              You're One Decision Away From This
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6 px-2">
+              The Leadership Impact You'll Create
             </h2>
-            <p className="text-xl text-zinc-400">
-              Real results. Real timeline. Real people who took action.
+            <p className="text-base sm:text-lg lg:text-xl text-zinc-400 px-4">
+              Real transformation. Proven process.
             </p>
           </motion.div>
 
-          {/* Circular Progress Charts */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-20">
-            <CircularProgress percentage={94} value="94%" label="Success Rate" />
-            <CircularProgress percentage={85} value="3.2x" label="Salary Growth" />
-            <CircularProgress percentage={78} value="6mo" label="Avg. Timeline" />
-          </div>
-
-          {/* Detailed Results Cards */}
+          {/* Key Transformation Metrics - Mobile Optimized */}
           <motion.div
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
+            className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-12 sm:mb-16 lg:mb-20"
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: true }}
             variants={stagger}
           >
             {[
               {
-                icon: DollarSign,
-                value: "3.2x",
-                label: "Average Salary Increase",
-                detail: "85% above market average",
-                bars: [85, 70, 92],
+                icon: Users,
+                value: "92%",
+                label: "Feel More Confident",
+                detail: "After first month",
               },
+              {
+                icon: TrendingUp,
+                value: "2.4x",
+                label: "Leadership Impact",
+                detail: "Team performance boost",
+              },
+              {
+                icon: Award,
+                value: "85%",
+                label: "Career Advancement",
+                detail: "Within 12 months",
+              },
+            ].map((metric, i) => (
+              <motion.div
+                key={metric.label}
+                variants={childFade}
+                whileHover={{ y: -8, scale: 1.02 }}
+                className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-xl sm:rounded-2xl p-6 sm:p-8 hover:border-zinc-700 transition-all relative overflow-hidden group"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                
+                <div className="relative z-10">
+                  <motion.div
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                    className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 bg-white/10 border border-white/20 rounded-lg sm:rounded-xl mb-4 sm:mb-6"
+                  >
+                    <metric.icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+                  </motion.div>
+
+                  <div className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-2 sm:mb-3 bg-gradient-to-b from-white to-zinc-300 bg-clip-text text-transparent">
+                    {metric.value}
+                  </div>
+                  <div className="text-white font-semibold text-base sm:text-lg mb-1 sm:mb-2">{metric.label}</div>
+                  <div className="text-xs sm:text-sm text-zinc-500">{metric.detail}</div>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* What You'll Achieve - Mobile Optimized */}
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={stagger}
+          >
+            {[
               {
                 icon: Target,
-                value: "94%",
-                label: "Achieve Career Goals",
-                detail: "Within 12 months",
-                bars: [94, 88, 96],
+                title: "Master Core Leadership Skills",
+                items: ["Delegation & empowerment", "Difficult conversations", "Strategic decision-making", "Executive presence"],
               },
               {
-                icon: Trophy,
-                value: "6mo",
-                label: "Time to Promotion",
-                detail: "2x faster than industry avg",
-                bars: [78, 82, 75],
+                icon: Compass,
+                title: "Build High-Performing Teams",
+                items: ["Clear vision & goals", "Strong team culture", "Accountability systems", "Talent development"],
               },
-            ].map((result, i) => (
+              {
+                icon: Rocket,
+                title: "Accelerate Your Career",
+                items: ["Faster promotions", "Bigger opportunities", "Stronger network", "Leadership credibility"],
+              },
+              {
+                icon: ShieldCheck,
+                title: "Lead with Confidence",
+                items: ["No more imposter syndrome", "Trust your decisions", "Inspire your team", "Influence executives"],
+              },
+            ].map((achievement, i) => (
               <motion.div
-                key={result.label}
+                key={achievement.title}
                 variants={childFade}
-                whileHover={{ y: -8 }}
-                className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-2xl p-8 hover:border-zinc-700 transition-all group"
+                whileHover={{ x: 5 }}
+                className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-5 sm:p-6 hover:border-zinc-700 transition-all"
               >
-                <motion.div
-                  whileHover={{ scale: 1.05, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                  className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600 rounded-2xl mb-6 shadow-lg group-hover:shadow-white/10"
-                >
-                  <result.icon className="w-8 h-8 text-white" />
-                </motion.div>
-
-                <div className="text-5xl font-bold mb-2 bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent">
-                  {result.value}
-                </div>
-                <div className="text-white font-semibold mb-2">{result.label}</div>
-                <div className="text-sm text-zinc-500 mb-6">{result.detail}</div>
-
-                {/* Mini Bar Chart */}
-                <div className="space-y-2">
-                  {result.bars.map((percentage, idx) => (
-                    <div key={idx} className="flex items-center gap-3">
-                      <div className="flex-1 h-2 bg-zinc-800 rounded-full overflow-hidden">
-                        <motion.div
-                          className="h-full bg-gradient-to-r from-white to-zinc-400 rounded-full"
-                          initial={{ width: 0 }}
-                          whileInView={{ width: `${percentage}%` }}
-                          viewport={{ once: true }}
-                          transition={{ duration: 1, delay: 0.2 + idx * 0.1 }}
-                        />
-                      </div>
-                      <span className="text-xs text-zinc-500 w-8">{percentage}%</span>
-                    </div>
-                  ))}
+                <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
+                    <achievement.icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-base sm:text-lg font-semibold text-white mb-2 sm:mb-3">{achievement.title}</h3>
+                    <ul className="space-y-1.5 sm:space-y-2">
+                      {achievement.items.map((item, idx) => (
+                        <li key={idx} className="flex items-center gap-2 text-xs sm:text-sm text-zinc-400">
+                          <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white shrink-0" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </motion.div>
             ))}
@@ -981,26 +1009,26 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Your Journey Timeline */}
-      <section className="py-32 px-6 bg-gradient-to-b from-zinc-900/30 to-transparent">
+      {/* Your Journey Timeline - Mobile Optimized */}
+      <section className="py-16 sm:py-24 lg:py-32 px-4 sm:px-6 bg-gradient-to-b from-zinc-900/30 to-transparent">
         <div className="max-w-5xl mx-auto">
           <motion.div
-            className="text-center mb-16"
+            className="text-center mb-10 sm:mb-14 lg:mb-16"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
             variants={fadeInUp}
           >
-            <div className="inline-block mb-6 px-4 py-2 bg-white/5 border border-white/10 rounded-full text-sm">
-              <span className="text-zinc-400">The exact </span>
-              <span className="text-white font-semibold">6-month blueprint</span>
-              <span className="text-zinc-400"> proven by 5,247 success stories</span>
+            <div className="inline-block mb-4 sm:mb-6 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/5 border border-white/10 rounded-full text-xs sm:text-sm">
+              <span className="text-zinc-400">Your </span>
+              <span className="text-white font-semibold">3-step process</span>
+              <span className="text-zinc-400"> to leadership</span>
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              From Stuck to Success
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4 px-2">
+              How It Works
             </h2>
-            <p className="text-xl text-zinc-400">
-              This is how <span className="text-white font-semibold">94% of our members</span> go from feeling lost to achieving their dream role
+            <p className="text-base sm:text-lg lg:text-xl text-zinc-400 px-4">
+              Simple process. Powerful results. Personalized for <span className="text-white font-semibold">your</span> career goals.
             </p>
           </motion.div>
 
@@ -1012,40 +1040,25 @@ export default function Home() {
             variants={stagger}
           >
             <TimelineItem
-              week="W1"
-              title="Foundation & Discovery"
-              description="Complete career assessment, identify gaps, and define your dream role"
+              week="1"
+              title="Take Assessment"
+              description="5-min questionnaire. We analyze your situation and create your career boost plan."
               isActive={true}
             />
             <TimelineItem
-              week="W3"
-              title="Strategic Planning"
-              description="Receive personalized roadmap with clear milestones and action items"
+              week="2"
+              title="Intro Call"
+              description="1-on-1 session to review your plan, map your roadmap, and set clear goals."
             />
             <TimelineItem
-              week="M2"
-              title="Skill Development"
-              description="Build critical competencies with curated resources and practice"
-            />
-            <TimelineItem
-              week="M3"
-              title="Network Expansion"
-              description="Connect with industry leaders and expand your professional circle"
-            />
-            <TimelineItem
-              week="M5"
-              title="Personal Branding"
-              description="Establish your authority and visibility in your target field"
-            />
-            <TimelineItem
-              week="6m"
-              title="Achievement Unlocked"
-              description="Land your dream role, get promoted, or launch your venture"
+              week="3+"
+              title="Regular Mentorship"
+              description="Weekly/bi-weekly calls to guide you, build skills, and track progress to your goals."
             />
           </motion.div>
 
           <motion.div
-            className="mt-12 text-center"
+            className="mt-8 sm:mt-10 lg:mt-12 text-center"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -1053,42 +1066,43 @@ export default function Home() {
           >
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="inline-flex items-center gap-3 bg-white text-black px-10 py-5 rounded-full text-lg font-semibold shadow-2xl shadow-white/10 hover:shadow-white/20 hover:bg-zinc-100 transition-all group"
+              className="inline-flex items-center gap-2 sm:gap-3 bg-white text-black px-6 sm:px-8 lg:px-10 py-3 sm:py-4 lg:py-5 rounded-full text-sm sm:text-base lg:text-lg font-semibold shadow-2xl shadow-white/10 hover:shadow-white/20 hover:bg-zinc-100 transition-all group active:scale-95"
             >
-              Start Your Journey Now
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <span className="hidden sm:inline">Start Your Journey Now</span>
+              <span className="sm:hidden">Start Now</span>
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
             </button>
           </motion.div>
         </div>
       </section>
 
-      {/* Cost of Waiting */}
-      <section className="py-32 px-6">
+      {/* Cost of Waiting - Mobile Optimized */}
+      <section className="py-16 sm:py-24 lg:py-32 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <CostOfWaiting />
         </div>
       </section>
 
-      {/* Why Our Methodology Works */}
-      <section className="py-32 px-6">
+      {/* Why Our Methodology Works - Mobile Optimized */}
+      <section className="py-16 sm:py-24 lg:py-32 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
           <motion.div
-            className="text-center mb-16"
+            className="text-center mb-10 sm:mb-14 lg:mb-16"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
             variants={fadeInUp}
           >
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4 px-2">
               Science-Backed Career Acceleration
             </h2>
-            <p className="text-xl text-zinc-400">
+            <p className="text-base sm:text-lg lg:text-xl text-zinc-400 px-4">
               Our methodology is built on research and proven by results
             </p>
           </motion.div>
 
           <motion.div
-            className="space-y-6"
+            className="space-y-4 sm:space-y-6"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
@@ -1149,8 +1163,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Final CTA Section */}
-      <section className="py-40 px-6 relative">
+      {/* Final CTA Section - Mobile Optimized */}
+      <section className="py-20 sm:py-28 lg:py-40 px-4 sm:px-6 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent" />
         
         <motion.div
@@ -1160,56 +1174,55 @@ export default function Home() {
           viewport={{ once: true, margin: "-100px" }}
           variants={stagger}
         >
-          <motion.div variants={childFade} className="mb-8 flex flex-col items-center gap-4">
+          <motion.div variants={childFade} className="mb-6 sm:mb-8 flex flex-col items-center gap-3 sm:gap-4">
             <motion.div
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="inline-flex items-center gap-3 px-5 py-2 bg-white/5 border border-white/10 rounded-full"
+              className="inline-flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-1.5 sm:py-2 bg-white/5 border border-white/10 rounded-full"
             >
               <motion.div
                 animate={{ opacity: [0.5, 1, 0.5] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
-                className="w-2 h-2 rounded-full bg-white"
+                className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white"
               />
-              <span className="text-sm text-white font-semibold">Only 12 spots left this month</span>
+              <span className="text-xs sm:text-sm text-white font-semibold">Limited spots in next cohort</span>
             </motion.div>
-            <CountdownTimer />
           </motion.div>
 
           <motion.h2
             variants={childFade}
-            className="text-5xl md:text-7xl font-bold text-white mb-6 leading-[1.1]"
+            className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-4 sm:mb-6 leading-[1.1] px-2"
           >
-            Don't Let Another Month
+            Ready to Lead?
             <br />
             <span className="bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
-              Pass You By
+              Not Just Manage?
             </span>
           </motion.h2>
           
           <motion.p
             variants={childFade}
-            className="text-xl text-zinc-400 mb-8 max-w-2xl mx-auto leading-relaxed"
+            className="text-base sm:text-lg lg:text-xl text-zinc-400 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-4"
           >
-            Right now, <span className="text-white font-semibold">328 people</span> are taking action this week. Your colleagues are moving ahead. Your dream role is being filled. <span className="text-white font-semibold">How much longer will you wait?</span>
+            Your team needs a leader, not just a manager. Take the first step now.
           </motion.p>
 
           <motion.div
             variants={childFade}
-            className="flex flex-wrap items-center justify-center gap-4 text-sm mb-12"
+            className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 lg:gap-4 text-xs sm:text-sm mb-8 sm:mb-10 lg:mb-12 px-2"
           >
-            <div className="px-3 py-1 bg-white/5 rounded-full text-zinc-400">
-              ⚡ <span className="text-white font-semibold">Sarah</span> booked 2 min ago
+            <div className="px-2.5 sm:px-3 py-1 bg-white/5 rounded-full text-zinc-400">
+              ⚡ <span className="text-white font-semibold">Olena K.</span> booked a call
             </div>
-            <div className="px-3 py-1 bg-white/5 rounded-full text-zinc-400">
-              ⚡ <span className="text-white font-semibold">Marcus</span> just completed assessment
+            <div className="px-2.5 sm:px-3 py-1 bg-white/5 rounded-full text-zinc-400">
+              ⚡ <span className="text-white font-semibold">James M.</span> completed assessment
             </div>
-            <div className="px-3 py-1 bg-white/5 rounded-full text-zinc-400">
-              ⚡ <span className="text-white font-semibold">Jennifer</span> unlocked roadmap
+            <div className="px-2.5 sm:px-3 py-1 bg-white/5 rounded-full text-zinc-400 hidden sm:inline-flex">
+              ⚡ <span className="text-white font-semibold">Anna S.</span> started career path
             </div>
           </motion.div>
 
-          <motion.div variants={childFade} className="flex flex-col items-center gap-6">
+          <motion.div variants={childFade} className="flex flex-col items-center gap-4 sm:gap-6">
             <motion.button
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               whileHover={{ scale: 1.05 }}
@@ -1222,23 +1235,24 @@ export default function Home() {
                 ],
               }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="inline-flex items-center gap-3 bg-white text-black px-12 py-6 rounded-full text-lg font-semibold shadow-2xl hover:bg-zinc-100 transition-all group cursor-pointer"
+              className="inline-flex items-center gap-2 sm:gap-3 bg-white text-black px-8 sm:px-10 lg:px-12 py-4 sm:py-5 lg:py-6 rounded-full text-base sm:text-lg font-semibold shadow-2xl hover:bg-zinc-100 transition-all group cursor-pointer active:scale-95"
             >
-              Claim Your Spot Now
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <span className="hidden sm:inline">Start Leadership Assessment</span>
+              <span className="sm:hidden">Start Assessment</span>
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform" />
             </motion.button>
 
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-zinc-500">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-white" />
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 lg:gap-6 text-xs sm:text-sm text-zinc-500">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                 Free assessment
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-white" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                 No credit card
               </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-white" />
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                 Instant results
               </div>
             </div>
@@ -1246,7 +1260,7 @@ export default function Home() {
 
           <motion.div
             variants={childFade}
-            className="mt-12 flex items-center justify-center gap-8 text-sm text-zinc-600"
+            className="mt-8 sm:mt-10 lg:mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-xs sm:text-sm text-zinc-600"
           >
             <div className="flex items-center gap-2">
               <div className="flex -space-x-2">
@@ -1260,29 +1274,29 @@ export default function Home() {
                     key={i}
                     src={img}
                     alt=""
-                    className="w-8 h-8 rounded-full border-2 border-[#0a0a0a] object-cover"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border-2 border-[#0a0a0a] object-cover"
                   />
                 ))}
               </div>
-              <span>328 started this week</span>
+              <span>{Math.floor(Math.random() * 21) + 10} started this week</span>
             </div>
           </motion.div>
         </motion.div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-zinc-800 py-12 px-6 bg-zinc-900/30">
+      {/* Footer - Mobile Optimized */}
+      <footer className="border-t border-zinc-800 py-8 sm:py-10 lg:py-12 px-4 sm:px-6 bg-zinc-900/30">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
             <div className="text-center md:text-left">
-              <div className="mb-3">
+              <div className="mb-2 sm:mb-3">
                 <Logo size="default" className="justify-center md:justify-start" />
               </div>
-              <p className="text-sm text-zinc-500">
+              <p className="text-xs sm:text-sm text-zinc-500">
                 Transforming careers, one roadmap at a time.
               </p>
             </div>
-            <div className="text-sm text-zinc-500">
+            <div className="text-xs sm:text-sm text-zinc-500">
               &copy; 2026 Careera. All rights reserved.
             </div>
           </div>

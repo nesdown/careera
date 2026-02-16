@@ -46,7 +46,7 @@ export default function CalendlyModal({ isOpen, onClose }) {
         <div className="p-4" style={{ height: 700 }}>
           <div
             className="calendly-inline-widget"
-            data-url="https://calendly.com/bohdan-holland/30min"
+            data-url="https://calendly.com/careera-roadmap/careera-roadmap-review"
             style={{ minWidth: 320, height: "100%" }}
           />
         </div>

@@ -1,186 +1,125 @@
-# Careera - Career Development Platform
+# Careesta 2.0
 
-An exact copy of the Careera career development SaaS application with all features and functionality.
+A modern career development and leadership coaching platform built with React, Vite, and Tailwind CSS.
 
 ## Features
 
-✅ **Landing Page**
-- Hero section with embedded questionnaire widget
-- Social proof statistics (5,000+ transformations, 500+ mentors, 94% success rate)
-- 3-step journey visualization
-- Results metrics with animated progress bars
-- Methodology section with 4 key differentiators
-- Multiple CTAs throughout
-- Professional footer
-
-✅ **12-Question Career Assessment**
-- 8 radio button questions (multiple choice)
-- 4 textarea questions (long-form responses)
-- Progress tracking with animated bar
-- Smooth question transitions
-- Answer validation
-- Back/forward navigation
-
-✅ **Completion & Roadmap**
-- Thank you page with next steps
-- 6-month personalized roadmap preview
-- Phase 1 unlocked (preview)
-- Phases 2-6 locked with blur effect
-- Paywall modal for full roadmap unlock
-
-✅ **Calendly Integration**
-- $29.99 career boost call booking
-- Inline Calendly widget modal
-- 30-minute strategy session
-
-✅ **Design System**
-- Dark theme (#0a0a0a background)
-- Zinc grayscale palette
-- Smooth Framer Motion animations
-- Responsive design (mobile-first)
-- Professional UI components
+- Interactive career assessment questionnaire
+- Personalized roadmap preview
+- Real-time activity feed
+- Calendly integration for booking sessions
+- Beautiful animations with Framer Motion
+- Fully responsive design (mobile-optimized)
 
 ## Tech Stack
 
-- **Framework:** React 18 with Vite
-- **Routing:** React Router DOM
-- **Styling:** Tailwind CSS v3
-- **Animations:** Framer Motion
-- **Icons:** Lucide React
-- **Build Tool:** Vite 7
+- **React 19** - UI framework
+- **Vite** - Build tool
+- **Tailwind CSS** - Styling
+- **Framer Motion** - Animations
+- **React Router** - Client-side routing
+- **Lucide React** - Icons
 
-## Getting Started
-
-### Installation
+## Local Development
 
 ```bash
+# Install dependencies
 npm install
-```
 
-### Development
-
-```bash
+# Run development server
 npm run dev
-```
 
-Visit `http://localhost:5173` (or next available port)
-
-### Build
-
-```bash
+# Build for production
 npm run build
-```
 
-### Preview Production Build
-
-```bash
+# Preview production build
 npm run preview
 ```
+
+## Deployment to Digital Ocean
+
+This project is configured to deploy to Digital Ocean App Platform.
+
+### Prerequisites
+
+1. Push your code to a GitHub repository
+2. Have a Digital Ocean account
+
+### Deploy Steps
+
+1. **Connect GitHub Repository**
+   - Go to Digital Ocean App Platform
+   - Click "Create App"
+   - Select your GitHub repository
+   - Choose the branch (usually `main`)
+
+2. **Configure Build Settings**
+   - Build Command: `npm run build`
+   - Run Command: `npm start`
+   - HTTP Port: `8080`
+
+3. **Environment Variables**
+   - PORT: `8080` (automatically set)
+
+4. **Deploy**
+   - Click "Next" and review settings
+   - Click "Create Resources"
+
+The app will automatically build and deploy. The `.do/app.yaml` file contains the configuration for Digital Ocean.
+
+### Manual Configuration
+
+If using the App Platform UI:
+
+- **Environment**: Node.js
+- **Build Command**: `npm run build`
+- **Run Command**: `npm start`
+- **HTTP Port**: 8080
 
 ## Project Structure
 
 ```
-src/
-├── components/
-│   ├── Navbar.jsx              # Fixed navigation bar with progress
-│   ├── QuestionnaireWidget.jsx # Embedded preview widget
-│   ├── CompletionPage.jsx      # Thank you + roadmap preview
-│   └── CalendlyModal.jsx       # Booking modal
-├── pages/
-│   ├── Home.jsx                # Landing page
-│   └── Questionnaire.jsx       # Full questionnaire flow
-├── data/
-│   └── questions.js            # All 12 questions + roadmap data
-├── App.jsx                     # Router setup
-├── main.jsx                    # React entry point
-└── index.css                   # Tailwind + global styles
+careesta2.0/
+├── src/
+│   ├── components/       # React components
+│   ├── data/            # Static data (questions, etc.)
+│   ├── pages/           # Page components
+│   ├── App.jsx          # Main app component
+│   └── main.jsx         # Entry point
+├── public/              # Static assets
+├── .do/                 # Digital Ocean config
+│   └── app.yaml         # App Platform spec
+├── serve.json           # Serve configuration
+└── package.json         # Dependencies and scripts
 ```
 
-## Key Pages
+## Key Features Explained
 
-### Landing Page (`/`)
-The main marketing page with:
-- Hero with questionnaire preview
-- Social proof stats
-- 3-step process
-- Results metrics
-- Methodology
-- Final CTA
-
-### Questionnaire (`/Questionnaire`)
-Full 12-question assessment with:
+### Assessment Flow
+- 12-question interactive questionnaire
 - Progress tracking
-- Smooth transitions
-- Answer validation
-- Completion flow
+- Personalized results
 
-## Configuration Files
-
-- `tailwind.config.js` - Tailwind CSS configuration
-- `postcss.config.js` - PostCSS configuration
-- `vite.config.js` - Vite build configuration
-
-## Features in Detail
-
-### Questionnaire Questions
-1. Career stage (radio - 4 options)
-2. Primary goal (radio - 5 options)
-3. Biggest challenge (textarea)
-4. Career satisfaction (radio - 5 options)
-5. Ideal career vision (textarea)
-6. Learning style (radio - 4 options)
-7. Current industry (textarea)
-8. Skills to develop (textarea)
-9. Timeline (radio - 4 options)
-10. Motivation (radio - 4 options)
-11. Career win (textarea)
-12. Support needed (radio - 4 options)
-
-### Roadmap Phases
-1. **Career Foundation Assessment** (Week 1-2) - Unlocked preview
-2. **Strategic Goal Setting** (Week 3-4) - Locked
-3. **Skill Development Plan** (Month 2-3) - Locked
-4. **Network Expansion Strategy** (Month 3-4) - Locked
-5. **Personal Brand Building** (Month 4-5) - Locked
-6. **Opportunity Execution** (Month 5-6) - Locked
+### Mobile Optimization
+- Responsive navbar with adaptive sizing
+- Mobile-friendly cards and layouts
+- Touch-optimized interactions
+- Proper text truncation and spacing
 
 ### Animations
-- Fade in on scroll (Framer Motion)
-- Stagger children animations
-- Hover effects on cards
-- Progress bar fills
 - Smooth page transitions
+- Hover effects on interactive elements
+- Live activity notifications
+- Animated counters and progress bars
 
-### Responsive Design
-- Mobile-first approach
-- Breakpoints: sm (640px), md (768px), lg (1024px)
-- Stacked layouts on mobile
-- Grid layouts on desktop
+## Environment Variables
 
-## Color Palette
+No environment variables are required for basic functionality. The Calendly integration uses a hardcoded URL which can be updated in `src/components/CalendlyModal.jsx`.
 
-- **Background:** `#0a0a0a` (near black)
-- **Zinc 900:** `#18181b` (cards)
-- **Zinc 800:** `#27272a` (borders)
-- **Zinc 700:** `#3f3f46` (hover states)
-- **Zinc 400:** `#a1a1aa` (secondary text)
-- **White:** `#ffffff` (primary text & CTAs)
-- **Green 500:** `#22c55e` (success indicators)
+## Support
 
-## Browser Support
-
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-
-## Notes
-
-- This is an exact replica of the original Careera application
-- All content, features, and design match the source
-- Calendly URL can be updated in `CalendlyModal.jsx`
-- Questions data can be modified in `src/data/questions.js`
+For questions or issues, please contact the development team.
 
 ## License
 
-Private project - All rights reserved
+Private and confidential.
