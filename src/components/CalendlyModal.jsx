@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 export default function CalendlyModal({ isOpen, onClose }) {
   const containerRef = useRef(null);
   const calendlyUrl =
-    "https://calendly.com/careera-roadmap/careera-roadmap-review?background_color=1a1a1a&text_color=ffffff&primary_color=ffffff";
+    "https://calendly.com/careera-roadmap/careera-roadmap-review?hide_gdpr_banner=1";
 
   useEffect(() => {
     if (!isOpen) return;
