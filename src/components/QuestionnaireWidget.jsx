@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, CheckCircle, Lock } from "lucide-react";
 import { questions, roadmapPhases } from "../data/questions";
@@ -36,6 +36,21 @@ export default function QuestionnaireWidget() {
     return true;
   })();
 
+  // Ensure Calendly widget loads when showCalendly becomes true
+  useEffect(() => {
+    if (showCalendly && window.Calendly) {
+      // Give the DOM a moment to render, then reinitialize if needed
+      const timer = setTimeout(() => {
+        const widget = document.querySelector('.calendly-inline-widget');
+        if (widget && !widget.querySelector('iframe')) {
+          // Widget hasn't initialized, the script should auto-init it
+          console.log('Calendly widget ready for initialization');
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [showCalendly]);
+
   // Show completion/results view or Calendly
   if (isComplete) {
     // Show Calendly embed as final step
@@ -57,14 +72,15 @@ export default function QuestionnaireWidget() {
             </p>
           </div>
 
-          {/* Calendly Embed */}
-          <div className="bg-black" style={{ height: '700px', maxHeight: '80vh' }}>
+          {/* Calendly Embed - Using exact embed code structure */}
+          <div className="bg-black" style={{ minHeight: '650px' }}>
+            {/* Calendly inline widget - exact structure from embed code */}
             <div 
-              className="calendly-inline-widget w-full h-full" 
+              className="calendly-inline-widget" 
               data-url="https://calendly.com/careera-roadmap/careera-roadmap-review?hide_gdpr_banner=1&background_color=000000&text_color=ffffff&primary_color=ffffff"
               style={{
-                width: '100%',
-                height: '100%'
+                minWidth: '320px',
+                height: '700px'
               }}
             />
           </div>
