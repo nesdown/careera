@@ -51,3 +51,10 @@ button {
 ::-webkit-scrollbar-thumb:hover {
   background: #3f3f46;
 }
+
+/* Calendly embed: force iframe to fill its container */
+.calendly-inline-widget,
+.calendly-inline-widget iframe {
+  width: 100% !important;
+  height: 100% !important;
+}

@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 
 export default function CalendlyModal({ isOpen, onClose }) {
-  const containerRef = useRef(null);
+  const widgetRef = useRef(null);
   const calendlyUrl =
     "https://calendly.com/careera-roadmap/careera-roadmap-review?hide_gdpr_banner=1";
 
@@ -13,14 +13,14 @@ export default function CalendlyModal({ isOpen, onClose }) {
     document.body.style.touchAction = "none";
 
     const init = () => {
-      if (!containerRef.current) return;
+      if (!widgetRef.current) return;
       if (!window.Calendly || typeof window.Calendly.initInlineWidget !== "function") return;
 
       // Avoid duplicated iframes on re-open.
-      containerRef.current.innerHTML = "";
+      widgetRef.current.innerHTML = "";
       window.Calendly.initInlineWidget({
         url: calendlyUrl,
-        parentElement: containerRef.current,
+        parentElement: widgetRef.current,
       });
     };
 
@@ -42,7 +42,7 @@ export default function CalendlyModal({ isOpen, onClose }) {
       document.body.style.overflow = "";
       document.body.style.touchAction = "";
     };
-  }, [isOpen]);
+  }, [isOpen, calendlyUrl]);
 
   if (!isOpen) return null;
 
@@ -52,7 +52,8 @@ export default function CalendlyModal({ isOpen, onClose }) {
       <div className="absolute inset-0 hidden sm:block" onClick={onClose} />
 
       <div className="relative mx-auto w-full h-[100dvh] sm:h-[90vh] sm:max-w-4xl sm:mt-[5vh] sm:rounded-3xl bg-zinc-900 border-0 sm:border sm:border-zinc-800 shadow-2xl overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-zinc-800 bg-zinc-900 shrink-0 pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <div className="flex h-full flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+          <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-zinc-800 bg-zinc-900 shrink-0">
           <div className="min-w-0 pr-3">
             <h3 className="text-base sm:text-lg font-bold text-white truncate">
               Book Your Call
@@ -68,15 +69,17 @@ export default function CalendlyModal({ isOpen, onClose }) {
           >
             <X className="w-5 h-5 text-zinc-400" />
           </button>
-        </div>
+          </div>
 
-        {/* This is the same “inline widget” Calendly embed, just initialized via JS. */}
-        <div className="flex-1 min-h-0 bg-[#1a1a1a] pb-[env(safe-area-inset-bottom)]">
-          <div
-            ref={containerRef}
-            className="w-full h-full"
-            style={{ minWidth: 320 }}
-          />
+          {/* Inline widget container (must have an explicit height) */}
+          <div className="flex-1 min-h-0 bg-[#1a1a1a]">
+            <div
+              ref={widgetRef}
+              className="calendly-inline-widget w-full h-full"
+              data-url={calendlyUrl}
+              style={{ minWidth: 320, height: "100%" }}
+            />
+          </div>
         </div>
       </div>
     </div>
