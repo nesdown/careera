@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, ArrowLeft, CheckCircle, Lock, Calendar, Download, Loader } from "lucide-react";
-import { questions, roadmapPhases } from "../data/questions";
+import { getActiveQuestions, getQuestionnaireVariant, roadmapPhases } from "../data/questions";
 
 export default function QuestionnaireWidget() {
   const [currentQ, setCurrentQ] = useState(0);
@@ -14,10 +14,32 @@ export default function QuestionnaireWidget() {
   const [hasBooked, setHasBooked] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingStep, setLoadingStep] = useState(0);
+  const [variant, setVariant] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  
+  // Initialize variant and questions on mount
+  useEffect(() => {
+    const selectedVariant = getQuestionnaireVariant();
+    const activeQuestions = getActiveQuestions();
+    setVariant(selectedVariant);
+    setQuestions(activeQuestions);
+    
+    // Track variant in answers for backend
+    console.log(`A/B Test: User assigned to Questionnaire ${selectedVariant}`);
+  }, []);
   
   const question = questions[currentQ];
-  const progress = ((currentQ + 1) / questions.length) * 100;
+  const progress = questions.length > 0 ? ((currentQ + 1) / questions.length) * 100 : 0;
   const isLast = currentQ === questions.length - 1;
+
+  // Don't render until questions are loaded
+  if (!question || questions.length === 0) {
+    return (
+      <div className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-2xl sm:rounded-3xl p-8 shadow-2xl w-full flex items-center justify-center min-h-[400px]">
+        <Loader className="w-8 h-8 text-white animate-spin" />
+      </div>
+    );
+  }
 
   const handleSelect = (option) => {
     setAnswers((prev) => ({ ...prev, [question.id]: option }));
@@ -52,7 +74,10 @@ export default function QuestionnaireWidget() {
     const apiPromise = fetch('/api/generate-report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ answers }),
+      body: JSON.stringify({ 
+        answers,
+        variant, // Include variant for tracking
+      }),
     });
 
     // Animate through steps while API is working
