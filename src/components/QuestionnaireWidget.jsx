@@ -48,21 +48,28 @@ export default function QuestionnaireWidget() {
     setLoadingProgress(0);
     setLoadingStep(0);
 
-    // Simulate realistic loading with steps
+    // Start API call immediately but animate progress
+    const apiPromise = fetch('/api/generate-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers }),
+    });
+
+    // Animate through steps while API is working
     const steps = [
-      { progress: 20, duration: 1500, step: 0 },  // Analyzing
-      { progress: 45, duration: 2000, step: 1 },  // Identifying strengths
-      { progress: 70, duration: 2500, step: 2 },  // Mapping opportunities
-      { progress: 90, duration: 2000, step: 3 },  // Creating roadmap
+      { progress: 25, duration: 1800, step: 0 },  // Analyzing
+      { progress: 50, duration: 2000, step: 1 },  // Identifying strengths
+      { progress: 75, duration: 2200, step: 2 },  // Mapping opportunities
+      { progress: 95, duration: 2000, step: 3 },  // Creating roadmap
     ];
 
     // Animate through steps
     for (const stepData of steps) {
+      const startProgress = loadingProgress;
+      const duration = stepData.duration;
+      const startTime = Date.now();
+      
       await new Promise(resolve => {
-        const startProgress = loadingProgress;
-        const duration = stepData.duration;
-        const startTime = Date.now();
-        
         const animate = () => {
           const elapsed = Date.now() - startTime;
           const progress = Math.min(elapsed / duration, 1);
@@ -82,26 +89,41 @@ export default function QuestionnaireWidget() {
       });
     }
 
+    // Wait for API to complete and animate to 100%
     try {
-      const response = await fetch('/api/generate-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers }),
-      });
-      
+      const response = await apiPromise;
       const data = await response.json();
+      
+      // Animate from 95% to 100%
+      const finalStart = Date.now();
+      await new Promise(resolve => {
+        const animate = () => {
+          const elapsed = Date.now() - finalStart;
+          const progress = Math.min(elapsed / 500, 1);
+          const currentProgress = 95 + (5 * progress);
+          
+          setLoadingProgress(currentProgress);
+          
+          if (progress < 1) {
+            requestAnimationFrame(animate);
+          } else {
+            resolve();
+          }
+        };
+        animate();
+      });
       
       if (data.success) {
         setPdfData(data);
-        // Complete the loading animation
-        setLoadingProgress(100);
-        await new Promise(resolve => setTimeout(resolve, 500));
+        setPdfGenerated(true);
+      } else {
+        // Still show the preview even if PDF generation failed
         setPdfGenerated(true);
       }
     } catch (error) {
       console.error('Error generating PDF:', error);
+      // Complete animation even on error
       setLoadingProgress(100);
-      await new Promise(resolve => setTimeout(resolve, 500));
       setPdfGenerated(true);
     } finally {
       setIsGeneratingPDF(false);
@@ -141,9 +163,9 @@ export default function QuestionnaireWidget() {
       const timer = setTimeout(() => {
         const widgetElement = document.querySelector('.calendly-inline-widget');
         if (widgetElement && !widgetElement.querySelector('iframe')) {
-          // Manually initialize the widget
+          // Manually initialize the widget with updated parameters
           window.Calendly.initInlineWidget({
-            url: 'https://calendly.com/careera-roadmap/careera-roadmap-review?hide_gdpr_banner=1&background_color=ffffff&text_color=000000&primary_color=000000',
+            url: 'https://calendly.com/careera-roadmap/careera-roadmap-review?hide_event_type_details=1&hide_gdpr_banner=1&background_color=0c0c0c&text_color=ffffff&primary_color=ffffff',
             parentElement: widgetElement,
           });
         }
@@ -206,31 +228,18 @@ export default function QuestionnaireWidget() {
             )}
           </div>
 
-          {/* Calendly Embed with Dark Frame */}
-          <div className="relative">
-            {/* Dark overlay frame */}
-            <div className="absolute inset-0 pointer-events-none z-10">
-              {/* Top fade */}
-              <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-zinc-900 to-transparent" />
-              {/* Side borders */}
-              <div className="absolute top-0 bottom-0 left-0 w-4 sm:w-6 bg-zinc-900" />
-              <div className="absolute top-0 bottom-0 right-0 w-4 sm:w-6 bg-zinc-900" />
-              {/* Bottom fade */}
-              <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-zinc-900 to-transparent" />
-            </div>
-
-            {/* Calendly iframe container */}
-            <div className="bg-zinc-900 px-4 sm:px-6 py-4">
-              <div className="bg-white rounded-xl overflow-hidden shadow-2xl">
-                <div 
-                  className="calendly-inline-widget" 
-                  style={{
-                    minWidth: '320px',
-                    height: '700px',
-                    width: '100%'
-                  }}
-                />
-              </div>
+          {/* Calendly Embed with Dark Integration */}
+          <div className="relative bg-zinc-950">
+            {/* Calendly iframe container - now with matching dark background */}
+            <div className="bg-zinc-950 px-4 sm:px-6 py-6">
+              <div 
+                className="calendly-inline-widget" 
+                style={{
+                  minWidth: '320px',
+                  height: '700px',
+                  width: '100%'
+                }}
+              />
             </div>
           </div>
 
