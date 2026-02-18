@@ -11,6 +11,7 @@ export default function QuestionnaireWidget() {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [pdfGenerated, setPdfGenerated] = useState(false);
   const [pdfData, setPdfData] = useState(null);
+  const [hasBooked, setHasBooked] = useState(false);
   
   const question = questions[currentQ];
   const progress = ((currentQ + 1) / questions.length) * 100;
@@ -77,20 +78,34 @@ export default function QuestionnaireWidget() {
   useEffect(() => {
     const handleCalendlyEvent = (e) => {
       if (e.data.event === 'calendly.event_scheduled') {
-        // User booked a call - show download prompt
-        if (pdfGenerated && pdfData) {
-          setTimeout(() => {
-            if (confirm('Thank you for booking! Would you like to download your Leadership Report now?')) {
-              downloadPDF();
-            }
-          }, 1000);
-        }
+        // User booked a call - mark as booked and show download
+        setHasBooked(true);
+        setTimeout(() => {
+          alert('Thank you for booking! You can now download your Leadership Report.');
+        }, 1000);
       }
     };
 
     window.addEventListener('message', handleCalendlyEvent);
     return () => window.removeEventListener('message', handleCalendlyEvent);
-  }, [pdfGenerated, pdfData]);
+  }, []);
+
+  // Initialize Calendly widget when showCalendly becomes true
+  useEffect(() => {
+    if (showCalendly && window.Calendly) {
+      const timer = setTimeout(() => {
+        const widgetElement = document.querySelector('.calendly-inline-widget');
+        if (widgetElement && !widgetElement.querySelector('iframe')) {
+          // Manually initialize the widget
+          window.Calendly.initInlineWidget({
+            url: 'https://calendly.com/careera-roadmap/careera-roadmap-review?hide_gdpr_banner=1&background_color=ffffff&text_color=000000&primary_color=000000',
+            parentElement: widgetElement,
+          });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [showCalendly]);
 
   // Show completion/results view or Calendly
   if (isComplete) {
@@ -110,16 +125,17 @@ export default function QuestionnaireWidget() {
                 Book Your Leadership Call
               </h3>
               <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-                Select a time that works for you
+                {hasBooked ? 'Booking confirmed! Download your report below.' : 'Select a time that works for you'}
               </p>
             </div>
-            {pdfGenerated && (
+            {pdfGenerated && hasBooked && (
               <button
                 onClick={downloadPDF}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-xs text-white transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-zinc-100 text-black border border-white/20 rounded-lg text-xs font-semibold transition-colors"
               >
                 <Download className="w-3 h-3" />
-                <span className="hidden sm:inline">Report</span>
+                <span className="hidden sm:inline">Download Report</span>
+                <span className="sm:hidden">Report</span>
               </button>
             )}
           </div>
@@ -128,7 +144,6 @@ export default function QuestionnaireWidget() {
           <div className="bg-white p-0">
             <div 
               className="calendly-inline-widget" 
-              data-url="https://calendly.com/careera-roadmap/careera-roadmap-review?hide_gdpr_banner=1&background_color=ffffff&text_color=000000&primary_color=000000"
               style={{
                 minWidth: '320px',
                 height: '700px',
@@ -180,19 +195,6 @@ export default function QuestionnaireWidget() {
               ? 'Creating your personalized leadership report...' 
               : 'Here\'s a preview—book your intro call to unlock everything'}
           </p>
-          
-          {/* Download PDF Button */}
-          {pdfGenerated && (
-            <motion.button
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              onClick={downloadPDF}
-              className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-xs sm:text-sm text-white transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Download Your Report
-            </motion.button>
-          )}
         </div>
 
         {/* Roadmap Preview - Compact */}
