@@ -29,13 +29,14 @@ import QuestionnaireWidget from "../components/QuestionnaireWidget";
 import Logo from "../components/Logo";
 import LiveActivity from "../components/LiveActivity";
 import CostOfWaiting from "../components/CostOfWaiting";
+import { SpaceBackground, OrbitingElements, ShootingStars, GradientOrbs } from "../components/SpaceBackground";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 60 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.6, ease: "easeOut" },
+    transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] },
   },
 };
 
@@ -43,7 +44,7 @@ const stagger = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.15 },
+    transition: { staggerChildren: 0.1 },
   },
 };
 
@@ -52,7 +53,7 @@ const childFade = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: "easeOut" },
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
   },
 };
 
@@ -657,6 +658,12 @@ export default function Home() {
           />
         ))}
       </div>
+
+      {/* Space Background Elements */}
+      <SpaceBackground />
+      <OrbitingElements />
+      <ShootingStars />
+      <GradientOrbs />
 
       <Navbar />
       <LiveActivity />
