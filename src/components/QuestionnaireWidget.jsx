@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, CheckCircle, Lock } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle, Lock, Calendar, Download, Loader } from "lucide-react";
 import { questions, roadmapPhases } from "../data/questions";
 
 export default function QuestionnaireWidget() {
@@ -8,6 +8,9 @@ export default function QuestionnaireWidget() {
   const [answers, setAnswers] = useState({});
   const [isComplete, setIsComplete] = useState(false);
   const [showCalendly, setShowCalendly] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [pdfGenerated, setPdfGenerated] = useState(false);
+  const [pdfData, setPdfData] = useState(null);
   
   const question = questions[currentQ];
   const progress = ((currentQ + 1) / questions.length) * 100;
@@ -20,6 +23,7 @@ export default function QuestionnaireWidget() {
   const handleNext = () => {
     if (isLast) {
       setIsComplete(true);
+      generatePDF();
     } else {
       setCurrentQ((prev) => prev + 1);
     }
@@ -36,20 +40,57 @@ export default function QuestionnaireWidget() {
     return true;
   })();
 
-  // Ensure Calendly widget loads when showCalendly becomes true
-  useEffect(() => {
-    if (showCalendly && window.Calendly) {
-      // Give the DOM a moment to render, then reinitialize if needed
-      const timer = setTimeout(() => {
-        const widget = document.querySelector('.calendly-inline-widget');
-        if (widget && !widget.querySelector('iframe')) {
-          // Widget hasn't initialized, the script should auto-init it
-          console.log('Calendly widget ready for initialization');
-        }
-      }, 100);
-      return () => clearTimeout(timer);
+  const generatePDF = async () => {
+    setIsGeneratingPDF(true);
+    try {
+      const response = await fetch('/api/generate-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setPdfData(data);
+        setPdfGenerated(true);
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      setIsGeneratingPDF(false);
     }
-  }, [showCalendly]);
+  };
+
+  const downloadPDF = () => {
+    if (!pdfData) return;
+    
+    const link = document.createElement('a');
+    link.href = pdfData.pdf;
+    link.download = pdfData.filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Listen for Calendly booking completion
+  useEffect(() => {
+    const handleCalendlyEvent = (e) => {
+      if (e.data.event === 'calendly.event_scheduled') {
+        // User booked a call - show download prompt
+        if (pdfGenerated && pdfData) {
+          setTimeout(() => {
+            if (confirm('Thank you for booking! Would you like to download your Leadership Report now?')) {
+              downloadPDF();
+            }
+          }, 1000);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleCalendlyEvent);
+    return () => window.removeEventListener('message', handleCalendlyEvent);
+  }, [pdfGenerated, pdfData]);
 
   // Show completion/results view or Calendly
   if (isComplete) {
@@ -60,33 +101,44 @@ export default function QuestionnaireWidget() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
-          className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden"
+          className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden w-full"
         >
           {/* Header */}
-          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-zinc-800 bg-zinc-900">
-            <h3 className="text-base sm:text-lg font-bold text-white">
-              Book Your Leadership Call
-            </h3>
-            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-              Let&apos;s discuss your career goals
-            </p>
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between">
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-white">
+                Book Your Leadership Call
+              </h3>
+              <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+                Select a time that works for you
+              </p>
+            </div>
+            {pdfGenerated && (
+              <button
+                onClick={downloadPDF}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-xs text-white transition-colors"
+              >
+                <Download className="w-3 h-3" />
+                <span className="hidden sm:inline">Report</span>
+              </button>
+            )}
           </div>
 
-          {/* Calendly Embed - Using exact embed code structure */}
-          <div className="bg-black" style={{ minHeight: '650px' }}>
-            {/* Calendly inline widget - exact structure from embed code */}
+          {/* Calendly Embed */}
+          <div className="bg-white p-0">
             <div 
               className="calendly-inline-widget" 
-              data-url="https://calendly.com/careera-roadmap/careera-roadmap-review?hide_gdpr_banner=1&background_color=000000&text_color=ffffff&primary_color=ffffff"
+              data-url="https://calendly.com/careera-roadmap/careera-roadmap-review?hide_gdpr_banner=1&background_color=ffffff&text_color=000000&primary_color=000000"
               style={{
                 minWidth: '320px',
-                height: '700px'
+                height: '700px',
+                width: '100%'
               }}
             />
           </div>
 
           {/* Back button */}
-          <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-zinc-800 bg-zinc-900">
+          <div className="px-4 sm:px-6 py-3 border-t border-zinc-800 bg-zinc-900">
             <button
               onClick={() => setShowCalendly(false)}
               className="text-xs sm:text-sm text-zinc-400 hover:text-white transition-colors"
@@ -104,7 +156,7 @@ export default function QuestionnaireWidget() {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 lg:p-6 shadow-2xl"
+        className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 lg:p-6 shadow-2xl w-full"
       >
         {/* Success Icon - Compact */}
         <div className="text-center mb-4 sm:mb-5">
@@ -114,14 +166,33 @@ export default function QuestionnaireWidget() {
             transition={{ type: "spring", duration: 0.6 }}
             className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-white/10 border border-white/20 rounded-full mb-3"
           >
-            <CheckCircle className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+            {isGeneratingPDF ? (
+              <Loader className="w-8 h-8 sm:w-10 sm:h-10 text-white animate-spin" />
+            ) : (
+              <CheckCircle className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+            )}
           </motion.div>
           <h3 className="text-lg sm:text-xl font-bold text-white mb-1.5">
-            Your Career Boost Plan is Ready
+            {isGeneratingPDF ? 'Generating Your Report...' : 'Your Career Boost Plan is Ready'}
           </h3>
           <p className="text-zinc-400 text-xs sm:text-sm">
-            Here's a preview—book your intro call to unlock everything
+            {isGeneratingPDF 
+              ? 'Creating your personalized leadership report...' 
+              : 'Here\'s a preview—book your intro call to unlock everything'}
           </p>
+          
+          {/* Download PDF Button */}
+          {pdfGenerated && (
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={downloadPDF}
+              className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-xs sm:text-sm text-white transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Download Your Report
+            </motion.button>
+          )}
         </div>
 
         {/* Roadmap Preview - Compact */}
