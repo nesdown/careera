@@ -12,6 +12,8 @@ export default function QuestionnaireWidget() {
   const [pdfGenerated, setPdfGenerated] = useState(false);
   const [pdfData, setPdfData] = useState(null);
   const [hasBooked, setHasBooked] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingStep, setLoadingStep] = useState(0);
   
   const question = questions[currentQ];
   const progress = ((currentQ + 1) / questions.length) * 100;
@@ -43,6 +45,43 @@ export default function QuestionnaireWidget() {
 
   const generatePDF = async () => {
     setIsGeneratingPDF(true);
+    setLoadingProgress(0);
+    setLoadingStep(0);
+
+    // Simulate realistic loading with steps
+    const steps = [
+      { progress: 20, duration: 1500, step: 0 },  // Analyzing
+      { progress: 45, duration: 2000, step: 1 },  // Identifying strengths
+      { progress: 70, duration: 2500, step: 2 },  // Mapping opportunities
+      { progress: 90, duration: 2000, step: 3 },  // Creating roadmap
+    ];
+
+    // Animate through steps
+    for (const stepData of steps) {
+      await new Promise(resolve => {
+        const startProgress = loadingProgress;
+        const duration = stepData.duration;
+        const startTime = Date.now();
+        
+        const animate = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const currentProgress = startProgress + (stepData.progress - startProgress) * progress;
+          
+          setLoadingProgress(currentProgress);
+          
+          if (progress < 1) {
+            requestAnimationFrame(animate);
+          } else {
+            setLoadingStep(stepData.step + 1);
+            resolve();
+          }
+        };
+        
+        animate();
+      });
+    }
+
     try {
       const response = await fetch('/api/generate-report', {
         method: 'POST',
@@ -54,10 +93,16 @@ export default function QuestionnaireWidget() {
       
       if (data.success) {
         setPdfData(data);
+        // Complete the loading animation
+        setLoadingProgress(100);
+        await new Promise(resolve => setTimeout(resolve, 500));
         setPdfGenerated(true);
       }
     } catch (error) {
       console.error('Error generating PDF:', error);
+      setLoadingProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setPdfGenerated(true);
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -118,48 +163,89 @@ export default function QuestionnaireWidget() {
           transition={{ duration: 0.5 }}
           className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden w-full"
         >
-          {/* Header */}
-          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-zinc-800 bg-zinc-900 flex items-center justify-between">
-            <div>
-              <h3 className="text-base sm:text-lg font-bold text-white">
-                Book Your Leadership Call
-              </h3>
-              <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-                {hasBooked ? 'Booking confirmed! Download your report below.' : 'Select a time that works for you'}
-              </p>
+          {/* Dark Header */}
+          <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-zinc-800 bg-zinc-900">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex-1">
+                <h3 className="text-lg sm:text-xl font-bold text-white mb-1">
+                  Schedule Your Leadership Call
+                </h3>
+                <p className="text-xs sm:text-sm text-zinc-400">
+                  {hasBooked ? '✓ Booking confirmed! Download your report below.' : 'Choose a time that works best for you'}
+                </p>
+              </div>
+              {pdfGenerated && hasBooked && (
+                <button
+                  onClick={downloadPDF}
+                  className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-zinc-100 text-black rounded-lg text-xs sm:text-sm font-semibold transition-colors shadow-lg"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline">Download Report</span>
+                  <span className="sm:hidden">Get PDF</span>
+                </button>
+              )}
             </div>
-            {pdfGenerated && hasBooked && (
-              <button
-                onClick={downloadPDF}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-zinc-100 text-black border border-white/20 rounded-lg text-xs font-semibold transition-colors"
-              >
-                <Download className="w-3 h-3" />
-                <span className="hidden sm:inline">Download Report</span>
-                <span className="sm:hidden">Report</span>
-              </button>
+
+            {/* Benefits Pills */}
+            {!hasBooked && (
+              <div className="flex flex-wrap gap-2">
+                {[
+                  "30-minute intro call",
+                  "Full report review",
+                  "Custom roadmap",
+                ].map((benefit) => (
+                  <span
+                    key={benefit}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/10 border border-white/20 rounded-full text-[10px] sm:text-xs text-white"
+                  >
+                    <CheckCircle className="w-3 h-3" />
+                    {benefit}
+                  </span>
+                ))}
+              </div>
             )}
           </div>
 
-          {/* Calendly Embed */}
-          <div className="bg-white p-0">
-            <div 
-              className="calendly-inline-widget" 
-              style={{
-                minWidth: '320px',
-                height: '700px',
-                width: '100%'
-              }}
-            />
+          {/* Calendly Embed with Dark Frame */}
+          <div className="relative">
+            {/* Dark overlay frame */}
+            <div className="absolute inset-0 pointer-events-none z-10">
+              {/* Top fade */}
+              <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-zinc-900 to-transparent" />
+              {/* Side borders */}
+              <div className="absolute top-0 bottom-0 left-0 w-4 sm:w-6 bg-zinc-900" />
+              <div className="absolute top-0 bottom-0 right-0 w-4 sm:w-6 bg-zinc-900" />
+              {/* Bottom fade */}
+              <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-zinc-900 to-transparent" />
+            </div>
+
+            {/* Calendly iframe container */}
+            <div className="bg-zinc-900 px-4 sm:px-6 py-4">
+              <div className="bg-white rounded-xl overflow-hidden shadow-2xl">
+                <div 
+                  className="calendly-inline-widget" 
+                  style={{
+                    minWidth: '320px',
+                    height: '700px',
+                    width: '100%'
+                  }}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Back button */}
-          <div className="px-4 sm:px-6 py-3 border-t border-zinc-800 bg-zinc-900">
+          {/* Dark Footer */}
+          <div className="px-4 sm:px-6 py-4 border-t border-zinc-800 bg-zinc-900 flex items-center justify-between">
             <button
               onClick={() => setShowCalendly(false)}
-              className="text-xs sm:text-sm text-zinc-400 hover:text-white transition-colors"
+              className="text-xs sm:text-sm text-zinc-400 hover:text-white transition-colors flex items-center gap-1"
             >
-              ← Back to Results
+              <ArrowLeft className="w-3 h-3" />
+              Back to Results
             </button>
+            <div className="text-[10px] sm:text-xs text-zinc-500">
+              Secure & confidential
+            </div>
           </div>
         </motion.div>
       );
@@ -173,58 +259,142 @@ export default function QuestionnaireWidget() {
         transition={{ duration: 0.5 }}
         className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 lg:p-6 shadow-2xl w-full"
       >
-        {/* Report Generation Progress */}
+        {/* Report Generation Progress - Space Theme */}
         {isGeneratingPDF && (
           <div className="mb-6">
-            <div className="text-center mb-4">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-white/10 border border-white/20 rounded-full mb-4"
-              >
-                <Loader className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-              </motion.div>
+            <div className="text-center mb-6">
+              {/* Orbiting Animation - Space Theme */}
+              <div className="relative inline-flex items-center justify-center w-32 h-32 sm:w-40 sm:h-40 mb-6">
+                {/* Center moon */}
+                <motion.div
+                  animate={{ 
+                    rotate: 360,
+                    scale: [1, 1.05, 1]
+                  }}
+                  transition={{ 
+                    rotate: { duration: 8, repeat: Infinity, ease: "linear" },
+                    scale: { duration: 2, repeat: Infinity }
+                  }}
+                  className="absolute w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full shadow-lg shadow-white/50"
+                />
+                
+                {/* Orbit path */}
+                <motion.div
+                  className="absolute w-full h-full border-2 border-zinc-700 rounded-full"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
+                />
+                
+                {/* Orbiting dots */}
+                {[0, 120, 240].map((angle, idx) => (
+                  <motion.div
+                    key={idx}
+                    className="absolute w-3 h-3 sm:w-4 sm:h-4 bg-white rounded-full"
+                    style={{
+                      top: '50%',
+                      left: '50%',
+                      transformOrigin: '0 0',
+                    }}
+                    animate={{
+                      rotate: 360,
+                      opacity: [0.3, 1, 0.3]
+                    }}
+                    transition={{
+                      rotate: { duration: 12, repeat: Infinity, ease: "linear", delay: idx * 0.3 },
+                      opacity: { duration: 3, repeat: Infinity, delay: idx * 0.3 }
+                    }}
+                    initial={{ rotate: angle }}
+                  >
+                    <div className="w-full h-full translate-x-[-50%] translate-y-[-50%]" 
+                         style={{ transform: `translate(-50%, -50%) translateX(${16 * (idx % 2 === 0 ? 3.5 : 4)}px)` }} />
+                  </motion.div>
+                ))}
+                
+                {/* Stars */}
+                {[...Array(8)].map((_, idx) => (
+                  <motion.div
+                    key={`star-${idx}`}
+                    className="absolute w-1 h-1 bg-white rounded-full"
+                    style={{
+                      top: `${20 + Math.random() * 60}%`,
+                      left: `${20 + Math.random() * 60}%`,
+                    }}
+                    animate={{
+                      opacity: [0, 1, 0],
+                      scale: [0, 1.5, 0]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      delay: idx * 0.3
+                    }}
+                  />
+                ))}
+              </div>
+
               <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
                 Crafting Your Leadership Report
               </h3>
               <p className="text-sm text-zinc-400">
-                Our AI is analyzing your responses...
+                Analyzing your path to leadership excellence...
               </p>
             </div>
 
             {/* Animated Progress Bar */}
-            <div className="bg-zinc-800 rounded-full h-2 overflow-hidden mb-3">
+            <div className="bg-zinc-800 rounded-full h-2 overflow-hidden mb-4 relative">
               <motion.div
-                className="h-full bg-gradient-to-r from-white via-zinc-300 to-white"
-                initial={{ width: "0%" }}
-                animate={{ width: "100%" }}
-                transition={{ duration: 3, ease: "easeInOut" }}
-              />
+                className="h-full bg-gradient-to-r from-white via-zinc-300 to-white relative overflow-hidden"
+                style={{ width: `${loadingProgress}%` }}
+              >
+                {/* Shimmer effect */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                  animate={{ x: ['-100%', '200%'] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                />
+              </motion.div>
+            </div>
+
+            {/* Progress percentage */}
+            <div className="text-center mb-4">
+              <span className="text-2xl font-bold text-white">{Math.round(loadingProgress)}%</span>
             </div>
 
             {/* Progress Steps */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               {[
-                { label: "Analyzing your current situation", delay: 0 },
-                { label: "Identifying key strengths", delay: 0.5 },
-                { label: "Mapping development opportunities", delay: 1 },
-                { label: "Creating personalized roadmap", delay: 1.5 },
-              ].map((step, idx) => (
+                { label: "Analyzing your current leadership situation", step: 0 },
+                { label: "Identifying your unique strengths", step: 1 },
+                { label: "Mapping growth opportunities", step: 2 },
+                { label: "Creating your personalized roadmap", step: 3 },
+              ].map((item, idx) => (
                 <motion.div
                   key={idx}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: step.delay }}
-                  className="flex items-center gap-2 text-xs sm:text-sm text-zinc-400"
+                  initial={{ opacity: 0.3, x: -20 }}
+                  animate={{ 
+                    opacity: loadingStep > item.step ? 1 : (loadingStep === item.step ? 0.7 : 0.3),
+                    x: loadingStep >= item.step ? 0 : -20
+                  }}
+                  transition={{ duration: 0.5 }}
+                  className="flex items-center gap-3 text-sm text-zinc-400"
                 >
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: step.delay + 0.2 }}
-                  >
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </motion.div>
-                  {step.label}
+                  {loadingStep > item.step ? (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", duration: 0.5 }}
+                      className="shrink-0"
+                    >
+                      <CheckCircle className="w-5 h-5 text-white" />
+                    </motion.div>
+                  ) : loadingStep === item.step ? (
+                    <Loader className="w-5 h-5 text-white animate-spin shrink-0" />
+                  ) : (
+                    <div className="w-5 h-5 border-2 border-zinc-700 rounded-full shrink-0" />
+                  )}
+                  <span className={loadingStep >= item.step ? 'text-white' : ''}>
+                    {item.label}
+                  </span>
                 </motion.div>
               ))}
             </div>
