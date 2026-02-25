@@ -2,14 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import OpenAI from 'openai';
 import axios from 'axios';
-import pdfMake from 'pdfmake/build/pdfmake.js';
-import pdfFonts from 'pdfmake/build/vfs_fonts.js';
+import { jsPDF } from 'jspdf';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 dotenv.config();
-pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -126,284 +124,169 @@ Provide your analysis in the following JSON structure:
 
     console.log('Illustrations generated');
 
-    // Step 3: Create beautiful PDF with pdfmake
-    const docDefinition = {
-      pageSize: 'A4',
-      pageMargins: [40, 60, 40, 60],
-      defaultStyle: {
-        font: 'Helvetica',
-      },
-      header: (currentPage) => {
-        if (currentPage === 1) return null;
-        return {
-          text: 'Careera Leadership Report',
-          alignment: 'center',
-          margin: [0, 20, 0, 0],
-          color: '#666',
-          fontSize: 9,
-        };
-      },
-      footer: (currentPage, pageCount) => {
-        return {
-          columns: [
-            {
-              text: `Page ${currentPage} of ${pageCount}`,
-              alignment: 'center',
-              fontSize: 9,
-              color: '#999',
-            },
-          ],
-          margin: [0, 0, 0, 20],
-        };
-      },
-      content: [
-        // Cover Page
-        {
-          text: 'From Manager to Respected Leader',
-          style: 'title',
-          margin: [0, 80, 0, 10],
-        },
-        {
-          text: 'Personalized Leadership Growth Report',
-          style: 'subtitle',
-          margin: [0, 0, 0, 40],
-        },
-        {
-          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 2, lineColor: '#000' }],
-          margin: [0, 0, 0, 40],
-        },
-        {
-          columns: [
-            { text: 'Assessment Date:', style: 'label', width: 120 },
-            { text: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }), style: 'value' },
-          ],
-          margin: [0, 0, 0, 10],
-        },
-        {
-          columns: [
-            { text: 'Leadership Stage:', style: 'label', width: 120 },
-            { text: analysis.leadershipStage, style: 'value' },
-          ],
-          margin: [0, 0, 0, 40],
-        },
-        {
-          text: 'Leadership isn\'t a promotion. It\'s a transition.',
-          style: 'quote',
-          margin: [40, 20, 40, 0],
-        },
-        { text: '', pageBreak: 'after' },
+    // Step 3: Create beautiful PDF with jsPDF
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    let yPos = margin;
 
-        // Executive Summary
-        { text: 'Executive Summary', style: 'sectionTitle', pageBreak: 'before' },
-        {
-          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 100, y2: 0, lineWidth: 3, lineColor: '#000' }],
-          margin: [0, 5, 0, 20],
-        },
-        {
-          text: `Leadership Readiness Score: ${analysis.leadershipScore} / 100`,
-          style: 'scoreTitle',
-          margin: [0, 0, 0, 20],
-        },
-        {
-          text: analysis.executiveSummary,
-          style: 'body',
-          margin: [0, 0, 0, 30],
-        },
-        illustrations[0] ? {
-          image: illustrations[0],
-          width: 400,
-          alignment: 'center',
-          margin: [0, 20, 0, 0],
-        } : {},
-
-        // Competencies
-        { text: 'Leadership Competency Breakdown', style: 'sectionTitle', pageBreak: 'before' },
-        {
-          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 100, y2: 0, lineWidth: 3, lineColor: '#000' }],
-          margin: [0, 5, 0, 30],
-        },
-        {
-          table: {
-            headerRows: 1,
-            widths: ['*', 80, 100],
-            body: [
-              [
-                { text: 'Competency', style: 'tableHeader' },
-                { text: 'Score', style: 'tableHeader', alignment: 'center' },
-                { text: 'Level', style: 'tableHeader', alignment: 'center' },
-              ],
-              ...analysis.competencies.map(comp => [
-                { text: comp.name, style: 'tableCell' },
-                { text: comp.score.toString(), style: 'tableCell', alignment: 'center', bold: true },
-                { text: comp.level, style: 'tableCell', alignment: 'center' },
-              ]),
-            ],
-          },
-          layout: {
-            hLineWidth: () => 1,
-            vLineWidth: () => 0,
-            hLineColor: () => '#E5E5E5',
-            paddingTop: () => 12,
-            paddingBottom: () => 12,
-          },
-        },
-
-        // Archetype
-        { text: `Your Leadership Archetype: ${analysis.archetype.name}`, style: 'sectionTitle', pageBreak: 'before' },
-        {
-          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 100, y2: 0, lineWidth: 3, lineColor: '#000' }],
-          margin: [0, 5, 0, 30],
-        },
-        {
-          ul: analysis.archetype.traits.map(trait => ({ text: trait, style: 'listItem' })),
-          margin: [0, 0, 0, 30],
-        },
-
-        // Growth Areas
-        { text: 'Top 3 Growth Areas', style: 'sectionTitle', pageBreak: 'before' },
-        {
-          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 100, y2: 0, lineWidth: 3, lineColor: '#000' }],
-          margin: [0, 5, 0, 30],
-        },
-        ...analysis.topGrowthAreas.map((area, idx) => [
-          {
-            text: `${idx + 1}. ${area.title}`,
-            style: 'growthTitle',
-            margin: [0, 0, 0, 8],
-          },
-          {
-            text: area.description,
-            style: 'body',
-            margin: [0, 0, 0, 20],
-          },
-        ]).flat(),
-
-        // 90-Day Roadmap
-        { text: '90-Day Leadership Roadmap', style: 'sectionTitle', pageBreak: 'before' },
-        {
-          canvas: [{ type: 'line', x1: 0, y1: 0, x2: 100, y2: 0, lineWidth: 3, lineColor: '#000' }],
-          margin: [0, 5, 0, 30],
-        },
-        {
-          text: `Month 1: ${analysis.roadmap.month1.title}`,
-          style: 'monthTitle',
-          margin: [0, 0, 0, 10],
-        },
-        {
-          ul: analysis.roadmap.month1.actions.map(action => ({ text: action, style: 'listItem' })),
-          margin: [0, 0, 0, 25],
-        },
-        {
-          text: `Month 2: ${analysis.roadmap.month2.title}`,
-          style: 'monthTitle',
-          margin: [0, 0, 0, 10],
-        },
-        {
-          ul: analysis.roadmap.month2.actions.map(action => ({ text: action, style: 'listItem' })),
-          margin: [0, 0, 0, 25],
-        },
-        {
-          text: `Month 3: ${analysis.roadmap.month3.title}`,
-          style: 'monthTitle',
-          margin: [0, 0, 0, 10],
-        },
-        {
-          ul: analysis.roadmap.month3.actions.map(action => ({ text: action, style: 'listItem' })),
-          margin: [0, 0, 0, 35],
-        },
-        illustrations[2] ? {
-          image: illustrations[2],
-          width: 450,
-          alignment: 'center',
-          margin: [0, 20, 0, 30],
-        } : {},
-        {
-          text: analysis.keyInsight,
-          style: 'quote',
-          margin: [40, 20, 40, 0],
-        },
-      ],
-      styles: {
-        title: {
-          fontSize: 28,
-          bold: true,
-          alignment: 'center',
-          color: '#000',
-        },
-        subtitle: {
-          fontSize: 18,
-          alignment: 'center',
-          color: '#555',
-        },
-        sectionTitle: {
-          fontSize: 20,
-          bold: true,
-          color: '#000',
-          margin: [0, 0, 0, 10],
-        },
-        scoreTitle: {
-          fontSize: 16,
-          bold: true,
-          color: '#000',
-        },
-        body: {
-          fontSize: 11,
-          lineHeight: 1.6,
-          color: '#333',
-        },
-        label: {
-          fontSize: 11,
-          color: '#666',
-        },
-        value: {
-          fontSize: 11,
-          bold: true,
-          color: '#000',
-        },
-        quote: {
-          fontSize: 13,
-          italics: true,
-          alignment: 'center',
-          color: '#666',
-        },
-        tableHeader: {
-          fontSize: 11,
-          bold: true,
-          color: '#000',
-          fillColor: '#F5F5F5',
-        },
-        tableCell: {
-          fontSize: 11,
-          color: '#333',
-        },
-        listItem: {
-          fontSize: 11,
-          lineHeight: 1.5,
-          color: '#333',
-        },
-        growthTitle: {
-          fontSize: 14,
-          bold: true,
-          color: '#000',
-        },
-        monthTitle: {
-          fontSize: 13,
-          bold: true,
-          color: '#000',
-        },
-      },
+    // Helper function to add new page if needed
+    const checkNewPage = (requiredSpace = 20) => {
+      if (yPos + requiredSpace > pageHeight - margin) {
+        doc.addPage();
+        yPos = margin;
+        return true;
+      }
+      return false;
     };
 
-    // Generate PDF
-    const pdfDoc = pdfMake.createPdf(docDefinition);
+    // Cover Page
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('From Manager to Respected Leader', pageWidth / 2, 80, { align: 'center' });
     
-    pdfDoc.getBase64((data) => {
-      res.json({
-        success: true,
-        pdf: `data:application/pdf;base64,${data}`,
-        filename: `Careera-Leadership-Report-${Date.now()}.pdf`,
-        analysis, // Include analysis for preview
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Personalized Leadership Growth Report', pageWidth / 2, 95, { align: 'center' });
+    
+    yPos = 120;
+    doc.setFontSize(11);
+    doc.text(`Assessment Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, margin, yPos);
+    yPos += 10;
+    doc.text(`Leadership Stage: ${analysis.leadershipStage}`, margin, yPos);
+    
+    yPos = 180;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(13);
+    doc.text('Leadership isn\'t a promotion. It\'s a transition.', pageWidth / 2, yPos, { align: 'center' });
+
+    // Page 2: Executive Summary
+    doc.addPage();
+    yPos = margin;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.text('Executive Summary', margin, yPos);
+    yPos += 15;
+    
+    doc.setFontSize(14);
+    doc.text(`Leadership Readiness Score: ${analysis.leadershipScore} / 100`, margin, yPos);
+    yPos += 15;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    const summaryLines = doc.splitTextToSize(analysis.executiveSummary, pageWidth - 2 * margin);
+    doc.text(summaryLines, margin, yPos);
+    yPos += summaryLines.length * 7 + 15;
+
+    // Competencies Table
+    doc.addPage();
+    yPos = margin;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.text('Leadership Competency Breakdown', margin, yPos);
+    yPos += 20;
+    
+    doc.setFontSize(11);
+    doc.text('Competency', margin, yPos);
+    doc.text('Score', margin + 110, yPos);
+    doc.text('Level', margin + 140, yPos);
+    yPos += 10;
+    
+    doc.setFont('helvetica', 'normal');
+    analysis.competencies.forEach(comp => {
+      checkNewPage();
+      doc.text(comp.name, margin, yPos);
+      doc.setFont('helvetica', 'bold');
+      doc.text(comp.score.toString(), margin + 110, yPos);
+      doc.setFont('helvetica', 'normal');
+      doc.text(comp.level, margin + 140, yPos);
+      yPos += 10;
+    });
+
+    // Archetype
+    doc.addPage();
+    yPos = margin;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.text(`Your Leadership Archetype: ${analysis.archetype.name}`, margin, yPos);
+    yPos += 15;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    analysis.archetype.traits.forEach(trait => {
+      checkNewPage();
+      doc.text(`• ${trait}`, margin, yPos);
+      yPos += 8;
+    });
+
+    // Growth Areas
+    doc.addPage();
+    yPos = margin;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.text('Top 3 Growth Areas', margin, yPos);
+    yPos += 20;
+    
+    analysis.topGrowthAreas.forEach((area, idx) => {
+      checkNewPage(25);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text(`${idx + 1}. ${area.title}`, margin, yPos);
+      yPos += 10;
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      const descLines = doc.splitTextToSize(area.description, pageWidth - 2 * margin);
+      doc.text(descLines, margin, yPos);
+      yPos += descLines.length * 7 + 12;
+    });
+
+    // 90-Day Roadmap
+    doc.addPage();
+    yPos = margin;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.text('90-Day Leadership Roadmap', margin, yPos);
+    yPos += 20;
+    
+    const months = [analysis.roadmap.month1, analysis.roadmap.month2, analysis.roadmap.month3];
+    months.forEach((month, idx) => {
+      checkNewPage(30);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.text(`Month ${idx + 1}: ${month.title}`, margin, yPos);
+      yPos += 10;
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      month.actions.forEach(action => {
+        checkNewPage();
+        doc.text(`• ${action}`, margin, yPos);
+        yPos += 8;
       });
+      yPos += 10;
+    });
+    
+    yPos += 15;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(13);
+    const insightLines = doc.splitTextToSize(analysis.keyInsight, pageWidth - 2 * margin - 20);
+    doc.text(insightLines, pageWidth / 2, yPos, { align: 'center' });
+
+    // Convert to base64
+    const pdfBase64 = doc.output('datauristring');
+
+    res.json({
+      success: true,
+      pdf: pdfBase64,
+      filename: `Careera-Leadership-Report-${Date.now()}.pdf`,
+      analysis,
     });
 
   } catch (error) {
