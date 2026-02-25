@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, CheckCircle, Lock, Download, Loader, Sparkles, Zap } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle, Lock, Download, Loader, Sparkles, Zap, ExternalLink } from "lucide-react";
 import { getActiveQuestions, getQuestionnaireVariant, roadmapPhases } from "../data/questions";
 
 export default function QuestionnaireWidget() {
@@ -9,17 +9,15 @@ export default function QuestionnaireWidget() {
   const [isComplete, setIsComplete] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [pdfGenerated, setPdfGenerated] = useState(false);
-  const [pdfData, setPdfData] = useState(null);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportReady, setReportReady] = useState(false);
+  const [reportData, setReportData] = useState(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingStep, setLoadingStep] = useState(0);
   
-  // Initialize variant and questions immediately (not in useEffect)
   const variant = useMemo(() => getQuestionnaireVariant(), []);
   const questions = useMemo(() => getActiveQuestions(), []);
   
-  // Log variant assignment
   useEffect(() => {
     console.log(`A/B Test: User assigned to Questionnaire ${variant}`);
   }, [variant]);
@@ -35,7 +33,7 @@ export default function QuestionnaireWidget() {
   const handleNext = () => {
     if (isLast) {
       setIsComplete(true);
-      generatePDF();
+      generateReport();
     } else {
       setCurrentQ((prev) => prev + 1);
     }
@@ -52,30 +50,28 @@ export default function QuestionnaireWidget() {
     return true;
   })();
 
-  const generatePDF = async () => {
-    setIsGeneratingPDF(true);
+  const generateReport = async () => {
+    setIsGeneratingReport(true);
     setLoadingProgress(0);
     setLoadingStep(0);
 
-    // Start API call immediately but animate progress
     const apiPromise = fetch('/api/generate-report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        answers,
-        variant, // Include variant for tracking
-      }),
+      body: JSON.stringify({ answers, variant }),
     });
 
-    // Animate through steps while API is working
     const steps = [
-      { progress: 25, duration: 1800, step: 0 },  // Analyzing
-      { progress: 50, duration: 2000, step: 1 },  // Identifying strengths
-      { progress: 75, duration: 2200, step: 2 },  // Mapping opportunities
-      { progress: 95, duration: 2000, step: 3 },  // Creating roadmap
+      { progress: 12, duration: 3000, step: 0 },
+      { progress: 24, duration: 3500, step: 1 },
+      { progress: 36, duration: 4000, step: 2 },
+      { progress: 48, duration: 4000, step: 3 },
+      { progress: 60, duration: 5000, step: 4 },
+      { progress: 72, duration: 5000, step: 5 },
+      { progress: 84, duration: 6000, step: 6 },
+      { progress: 95, duration: 8000, step: 7 },
     ];
 
-    // Animate through steps
     for (const stepData of steps) {
       const startProgress = loadingProgress;
       const duration = stepData.duration;
@@ -84,39 +80,33 @@ export default function QuestionnaireWidget() {
       await new Promise(resolve => {
         const animate = () => {
           const elapsed = Date.now() - startTime;
-          const progress = Math.min(elapsed / duration, 1);
-          const currentProgress = startProgress + (stepData.progress - startProgress) * progress;
+          const t = Math.min(elapsed / duration, 1);
+          const currentProgress = startProgress + (stepData.progress - startProgress) * t;
           
           setLoadingProgress(currentProgress);
           
-          if (progress < 1) {
+          if (t < 1) {
             requestAnimationFrame(animate);
           } else {
             setLoadingStep(stepData.step + 1);
             resolve();
           }
         };
-        
         animate();
       });
     }
 
-    // Wait for API to complete and animate to 100%
     try {
       const response = await apiPromise;
       const data = await response.json();
       
-      // Animate from 95% to 100%
       const finalStart = Date.now();
       await new Promise(resolve => {
         const animate = () => {
           const elapsed = Date.now() - finalStart;
-          const progress = Math.min(elapsed / 500, 1);
-          const currentProgress = 95 + (5 * progress);
-          
-          setLoadingProgress(currentProgress);
-          
-          if (progress < 1) {
+          const t = Math.min(elapsed / 800, 1);
+          setLoadingProgress(95 + (5 * t));
+          if (t < 1) {
             requestAnimationFrame(animate);
           } else {
             resolve();
@@ -126,50 +116,46 @@ export default function QuestionnaireWidget() {
       });
       
       if (data.success) {
-        setPdfData(data);
-        setPdfGenerated(true);
+        setReportData(data);
+        setReportReady(true);
       } else {
-        // Still show the preview even if PDF generation failed
-        setPdfGenerated(true);
+        setReportReady(true);
       }
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      // Complete animation even on error
+      console.error('Error generating report:', error);
       setLoadingProgress(100);
-      setPdfGenerated(true);
+      setReportReady(true);
     } finally {
-      setIsGeneratingPDF(false);
+      setIsGeneratingReport(false);
     }
   };
 
+  const openReport = () => {
+    if (!reportData?.gammaUrl) return;
+    window.open(reportData.gammaUrl, '_blank', 'noopener,noreferrer');
+  };
+
   const downloadPDF = () => {
-    if (!pdfData) return;
-    
-    const link = document.createElement('a');
-    link.href = pdfData.pdf;
-    link.download = pdfData.filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (reportData?.exportUrl) {
+      window.open(reportData.exportUrl, '_blank', 'noopener,noreferrer');
+    } else if (reportData?.gammaUrl) {
+      window.open(reportData.gammaUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handlePurchase = (option) => {
     setSelectedOption(option);
-    // TODO: Integrate payment here
     console.log(`User selected: ${option}`);
     
-    // For now, just simulate purchase and allow download
     setTimeout(() => {
       alert(`Purchase confirmed! ${option === 'report' ? 'Report' : 'Report + Career Boost Call'}`);
       if (option === 'report') {
-        downloadPDF();
+        openReport();
       }
     }, 500);
   };
 
-  // Show completion/results view or pricing
   if (isComplete) {
-    // Show pricing options
     if (showPricing) {
       return (
         <motion.div
@@ -178,7 +164,6 @@ export default function QuestionnaireWidget() {
           transition={{ duration: 0.5 }}
           className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden w-full"
         >
-          {/* Header */}
           <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-zinc-800 bg-zinc-900">
             <h3 className="text-lg sm:text-xl font-bold text-white mb-1">
               Get Your Leadership Report
@@ -188,9 +173,7 @@ export default function QuestionnaireWidget() {
             </p>
           </div>
 
-          {/* Pricing Options */}
           <div className="p-4 sm:p-6 space-y-4">
-            {/* Option 1: Report Only */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -200,13 +183,13 @@ export default function QuestionnaireWidget() {
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <Download className="w-5 h-5 text-white" />
+                    <ExternalLink className="w-5 h-5 text-white" />
                     <h4 className="text-base sm:text-lg font-bold text-white">
                       Leadership Report Only
                     </h4>
                   </div>
                   <p className="text-xs sm:text-sm text-zinc-400 mb-3">
-                    Get your personalized 6-page leadership report with AI analysis
+                    Get your personalized 22-page interactive leadership report with AI analysis and visuals
                   </p>
                 </div>
                 <div className="text-right ml-4">
@@ -216,11 +199,12 @@ export default function QuestionnaireWidget() {
               
               <ul className="space-y-2 mb-4">
                 {[
-                  "Personalized leadership analysis",
-                  "6 competency scores",
+                  "22+ page interactive report",
+                  "6 competency deep-dives with scores",
                   "Leadership archetype identification",
-                  "90-day action roadmap",
-                  "Instant PDF download",
+                  "90-day roadmap with weekly KPIs",
+                  "AI-generated visuals & illustrations",
+                  "Shareable online link + PDF export",
                 ].map((feature) => (
                   <li key={feature} className="flex items-center gap-2 text-xs sm:text-sm text-zinc-300">
                     <CheckCircle className="w-4 h-4 text-white shrink-0" />
@@ -234,14 +218,12 @@ export default function QuestionnaireWidget() {
               </button>
             </motion.div>
 
-            {/* Option 2: Report + Career Boost Call */}
             <motion.div
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => handlePurchase('report-call')}
               className="relative bg-gradient-to-br from-white/10 to-zinc-900/50 border-2 border-white/40 rounded-xl p-4 sm:p-6 cursor-pointer transition-all overflow-hidden group"
             >
-              {/* Popular badge */}
               <div className="absolute top-4 right-4 px-2 py-1 bg-white text-black rounded-full text-[10px] font-bold">
                 BEST VALUE
               </div>
@@ -292,7 +274,6 @@ export default function QuestionnaireWidget() {
             </motion.div>
           </div>
 
-          {/* Footer */}
           <div className="px-4 sm:px-6 py-4 border-t border-zinc-800 bg-zinc-900">
             <button
               onClick={() => setShowPricing(false)}
@@ -306,7 +287,6 @@ export default function QuestionnaireWidget() {
       );
     }
 
-    // Show results page (more compact)
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -314,12 +294,9 @@ export default function QuestionnaireWidget() {
         transition={{ duration: 0.5 }}
         className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 lg:p-6 shadow-2xl w-full"
       >
-        {/* Report Generation Progress - Hacking Theme */}
-        {isGeneratingPDF && (
+        {isGeneratingReport && (
           <div className="mb-6">
-            {/* Terminal/Console Container */}
             <div className="bg-black border border-green-500/30 rounded-lg overflow-hidden shadow-2xl shadow-green-500/20">
-              {/* Terminal Header */}
               <div className="bg-zinc-900 border-b border-green-500/30 px-4 py-2 flex items-center gap-2">
                 <div className="flex gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-red-500"></div>
@@ -327,13 +304,11 @@ export default function QuestionnaireWidget() {
                   <div className="w-3 h-3 rounded-full bg-green-500"></div>
                 </div>
                 <span className="text-green-400 text-xs sm:text-sm font-mono ml-2">
-                  careera@terminal:~$ ./decode-leadership.sh
+                  careera@terminal:~$ ./build-leadership-report.sh
                 </span>
               </div>
 
-              {/* Terminal Content */}
-              <div className="p-4 sm:p-6 font-mono text-xs sm:text-sm space-y-2 min-h-[300px]">
-                {/* Matrix-style header */}
+              <div className="p-4 sm:p-6 font-mono text-xs sm:text-sm space-y-2 min-h-[380px]">
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -343,21 +318,20 @@ export default function QuestionnaireWidget() {
                     ╔═══════════════════════════════════════════════╗
                   </div>
                   <div className="text-center text-sm sm:text-base mb-2 text-white">
-                    🔐 DECODING YOUR CAREER DNA...
+                    🔐 BUILDING YOUR PREMIUM LEADERSHIP REPORT...
                   </div>
                   <div className="text-base sm:text-lg font-bold">
                     ╚═══════════════════════════════════════════════╝
                   </div>
                 </motion.div>
 
-                {/* Console Output Lines */}
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.2 }}
                   className="text-cyan-400"
                 >
-                  <span className="text-green-400">$</span> Initializing neural network...
+                  <span className="text-green-400">$</span> Initializing AI engines...
                   <motion.span
                     animate={{ opacity: [1, 0, 1] }}
                     transition={{ duration: 0.8, repeat: Infinity }}
@@ -370,32 +344,19 @@ export default function QuestionnaireWidget() {
                   transition={{ delay: 0.5 }}
                   className="text-zinc-400 text-[10px] sm:text-xs"
                 >
-                  → Loading AI models... [████████████████] 100%
+                  → Loading GPT-4o + Gamma Design Engine... [████████████████] 100%
                 </motion.div>
 
-                {/* Progress Steps with Console Style */}
                 <div className="space-y-3 mt-4">
                   {[
-                    { 
-                      label: "ANALYZING LEADERSHIP PATTERNS", 
-                      detail: "Parsing management style indicators...",
-                      step: 0 
-                    },
-                    { 
-                      label: "EXTRACTING COMPETENCY MATRIX", 
-                      detail: "Calculating strategic thinking coefficients...",
-                      step: 1 
-                    },
-                    { 
-                      label: "IDENTIFYING GROWTH VECTORS", 
-                      detail: "Mapping development opportunities...",
-                      step: 2 
-                    },
-                    { 
-                      label: "COMPILING ROADMAP ALGORITHMS", 
-                      detail: "Generating 90-day action sequences...",
-                      step: 3 
-                    },
+                    { label: "ANALYZING LEADERSHIP PATTERNS", detail: "Parsing management style indicators...", step: 0 },
+                    { label: "SCORING 6 COMPETENCY DIMENSIONS", detail: "Calculating strategic thinking coefficients...", step: 1 },
+                    { label: "IDENTIFYING YOUR ARCHETYPE", detail: "Matching leadership behavior patterns...", step: 2 },
+                    { label: "BUILDING 90-DAY ROADMAP", detail: "Generating personalized action sequences...", step: 3 },
+                    { label: "DETECTING BLIND SPOTS", detail: "Cross-referencing behavioral signals...", step: 4 },
+                    { label: "DESIGNING REPORT PAGES", detail: "Creating 22+ visual pages with dark theme...", step: 5 },
+                    { label: "GENERATING AI ILLUSTRATIONS", detail: "Rendering professional visuals...", step: 6 },
+                    { label: "FINALIZING PREMIUM REPORT", detail: "Applying final polish and export...", step: 7 },
                   ].map((item, idx) => (
                     <motion.div
                       key={idx}
@@ -442,7 +403,6 @@ export default function QuestionnaireWidget() {
                   ))}
                 </div>
 
-                {/* ASCII Progress Bar */}
                 <div className="mt-6 space-y-2">
                   <div className="text-zinc-400 text-[10px] sm:text-xs">
                     Progress: {Math.round(loadingProgress)}%
@@ -458,14 +418,13 @@ export default function QuestionnaireWidget() {
                   </div>
                 </div>
 
-                {/* System Messages */}
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: [0.5, 1, 0.5] }}
                   transition={{ duration: 2, repeat: Infinity }}
                   className="mt-4 text-yellow-400/80 text-[10px] sm:text-xs"
                 >
-                  <span className="text-yellow-500">⚡</span> Optimizing neural pathways...
+                  <span className="text-yellow-500">⚡</span> {loadingStep < 4 ? 'Optimizing neural pathways...' : 'Rendering premium visuals...'}
                 </motion.div>
 
                 {loadingProgress > 80 && (
@@ -474,22 +433,29 @@ export default function QuestionnaireWidget() {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-cyan-400 text-xs sm:text-sm mt-3"
                   >
-                    <span className="text-green-400">→</span> Finalizing leadership blueprint...
+                    <span className="text-green-400">→</span> Almost there — finalizing your leadership blueprint...
                   </motion.div>
                 )}
+
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1.5 }}
+                  className="mt-3 text-zinc-600 text-[10px] sm:text-xs"
+                >
+                  This usually takes 1-2 minutes while we create your personalized report
+                </motion.div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Report Preview - Show after generation */}
-        {!isGeneratingPDF && pdfGenerated && (
+        {!isGeneratingReport && reportReady && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            {/* Success Header */}
             <div className="text-center mb-6">
               <motion.div
                 initial={{ scale: 0 }}
@@ -503,95 +469,93 @@ export default function QuestionnaireWidget() {
                 Your Leadership Report is Ready
               </h3>
               <p className="text-sm text-zinc-400">
-                Here's a preview of what we've prepared for you
+                {reportData?.gammaUrl
+                  ? "Your personalized 22-page interactive report has been created"
+                  : "Here's a preview of what we've prepared for you"}
               </p>
             </div>
 
-            {/* Report Preview Card */}
             <div className="bg-gradient-to-br from-zinc-800/50 to-zinc-900/50 border border-zinc-700 rounded-xl p-4 sm:p-6 mb-6 relative overflow-hidden">
-              {/* Report Header */}
               <div className="flex items-center justify-between mb-4 pb-4 border-b border-zinc-700">
                 <div>
                   <div className="text-xs sm:text-sm font-semibold text-white mb-1">
-                    LEADERSHIP DEVELOPMENT REPORT
+                    LEADERSHIP READINESS REPORT
                   </div>
                   <div className="text-[10px] sm:text-xs text-zinc-500">
                     {new Date().toLocaleDateString('en-US', { 
                       year: 'numeric', 
                       month: 'long', 
                       day: 'numeric' 
-                    })}
+                    })} · 22+ Pages · Dark Theme
                   </div>
                 </div>
-                <div className="px-2 py-1 bg-white/10 border border-white/20 rounded text-[10px] font-bold text-white">
-                  PREVIEW
+                <div className="px-2 py-1 bg-green-500/20 border border-green-500/30 rounded text-[10px] font-bold text-green-400">
+                  READY
                 </div>
               </div>
 
-              {/* Report Excerpt */}
               <div className="space-y-4 mb-4">
-                {/* Executive Summary */}
                 <div>
                   <h4 className="text-sm sm:text-base font-bold text-white mb-2 flex items-center gap-2">
                     <span className="w-1 h-4 bg-white rounded-full"></span>
-                    Executive Summary
+                    What's Inside Your Report
                   </h4>
-                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
-                    Based on your assessment, you're a motivated manager ready to elevate 
-                    your leadership impact. Your responses indicate strong foundational skills 
-                    with clear opportunities for strategic growth...
-                  </p>
-                </div>
-
-                {/* Key Strengths Preview */}
-                <div>
-                  <h4 className="text-sm sm:text-base font-bold text-white mb-2 flex items-center gap-2">
-                    <span className="w-1 h-4 bg-white rounded-full"></span>
-                    Key Strengths Identified
-                  </h4>
-                  <div className="space-y-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {[
-                      "Strong commitment to team development and growth",
-                      "Clear vision for personal career advancement",
-                      "Demonstrated self-awareness and learning mindset",
-                    ].map((strength, idx) => (
+                      "Executive Summary & Leadership Score",
+                      "6 Competency Deep-Dive Analyses",
+                      "Your Leadership Archetype Profile",
+                      "Top 3 Growth Areas with Action Steps",
+                      "Blind Spots & Strength Levers",
+                      "Stakeholder Management Playbook",
+                      "90-Day Roadmap (Month-by-Month)",
+                      "Weekly KPIs & Tracking Framework",
+                      "Executive Communication Script",
+                      "First 7-Day Action Sprint",
+                      "AI-Generated Visuals & Illustrations",
+                      "Projected 90-Day Outcomes",
+                    ].map((item, idx) => (
                       <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm text-zinc-300">
-                        <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white mt-0.5 shrink-0" />
-                        <span>{strength}</span>
+                        <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400 mt-0.5 shrink-0" />
+                        <span>{item}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Immediate Action Items Preview */}
-                <div>
-                  <h4 className="text-sm sm:text-base font-bold text-white mb-2 flex items-center gap-2">
-                    <span className="w-1 h-4 bg-white rounded-full"></span>
-                    Immediate Action Items
-                  </h4>
-                  <div className="space-y-1.5">
-                    {[
-                      "Schedule 1-on-1s with direct reports this week",
-                      "Identify one delegation opportunity for tomorrow",
-                    ].map((action, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm text-zinc-300">
-                        <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border border-white/30 rounded mt-0.5 shrink-0" />
-                        <span>{action}</span>
+                {reportData?.analysis && (
+                  <div className="mt-4 pt-4 border-t border-zinc-700">
+                    <h4 className="text-sm sm:text-base font-bold text-white mb-3 flex items-center gap-2">
+                      <span className="w-1 h-4 bg-white rounded-full"></span>
+                      Quick Preview
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white/10 border border-white/20 rounded-lg flex items-center justify-center">
+                          <span className="text-xl sm:text-2xl font-bold text-white">
+                            {reportData.analysis.leadershipScore}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-sm sm:text-base font-semibold text-white">
+                            Leadership Score
+                          </div>
+                          <div className="text-xs sm:text-sm text-zinc-400">
+                            {reportData.analysis.leadershipStage}
+                          </div>
+                        </div>
                       </div>
-                    ))}
-                    <div className="flex items-start gap-2 text-xs sm:text-sm text-zinc-500 italic">
-                      <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 border border-zinc-700 rounded mt-0.5 shrink-0" />
-                      <span>+ 5 more personalized actions...</span>
+                      <div className="text-xs sm:text-sm text-zinc-400 leading-relaxed line-clamp-3">
+                        {reportData.analysis.executiveSummary}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
 
-              {/* Fade Overlay for "Locked" Effect */}
-              <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-zinc-900 to-transparent pointer-events-none" />
+              <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-zinc-900 to-transparent pointer-events-none" />
             </div>
 
-            {/* Unlock CTA */}
             <motion.div
               animate={{
                 borderColor: ["rgba(255,255,255,0.2)", "rgba(255,255,255,0.4)", "rgba(255,255,255,0.2)"],
@@ -604,19 +568,19 @@ export default function QuestionnaireWidget() {
               </div>
               
               <h4 className="text-base sm:text-lg font-bold text-white mb-2">
-                See Your Full Report + Personalized Roadmap
+                View Your Full Interactive Report
               </h4>
               <p className="text-xs sm:text-sm text-zinc-400 mb-4">
-                Your complete report includes 30-day quick wins, 3-month leadership roadmap, 
-                and curated resources. Book your intro call to unlock everything.
+                Your complete 22-page report with AI-generated visuals, competency analysis, 
+                90-day roadmap, and personalized action plan is ready to view.
               </p>
               
               <div className="grid grid-cols-2 gap-2 mb-4">
                 {[
-                  "Complete 7-section report",
-                  "Personalized action plan",
-                  "1-on-1 strategy call",
-                  "Ongoing mentorship",
+                  "22+ beautifully designed pages",
+                  "AI-generated illustrations",
+                  "Interactive online viewing",
+                  "PDF export available",
                 ].map((feature) => (
                   <div
                     key={feature}
@@ -651,14 +615,13 @@ export default function QuestionnaireWidget() {
               </p>
             </motion.div>
 
-            {/* Restart Option */}
             <button
               onClick={() => {
                 setIsComplete(false);
                 setCurrentQ(0);
                 setAnswers({});
-                setPdfGenerated(false);
-                setPdfData(null);
+                setReportReady(false);
+                setReportData(null);
               }}
               className="w-full text-center text-xs sm:text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
             >
@@ -667,8 +630,7 @@ export default function QuestionnaireWidget() {
           </motion.div>
         )}
 
-        {/* Fallback - No report yet */}
-        {!isGeneratingPDF && !pdfGenerated && (
+        {!isGeneratingReport && !reportReady && (
           <div className="text-center py-8">
             <Loader className="w-12 h-12 text-zinc-600 mx-auto mb-4 animate-spin" />
             <p className="text-sm text-zinc-500">Loading your results...</p>
@@ -678,7 +640,6 @@ export default function QuestionnaireWidget() {
     );
   }
 
-  // Show questionnaire - Fixed width
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -702,7 +663,6 @@ export default function QuestionnaireWidget() {
         />
       </div>
 
-      {/* Fixed height container for consistent size */}
       <div className="min-h-[280px] sm:min-h-[320px] mb-5 sm:mb-6">
         <AnimatePresence mode="wait">
           <motion.div
