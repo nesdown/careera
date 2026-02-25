@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import OpenAI from 'openai';
+import axios from 'axios';
 import { jsPDF } from 'jspdf';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
@@ -34,6 +35,8 @@ app.use(express.static(distPath, {
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+const NAPKIN_API_KEY = process.env.NAPKIN_AI_KEY;
 
 function hashString(input = '') {
   let hash = 0;
@@ -174,6 +177,40 @@ function parseAiJson(content) {
   }
 }
 
+async function generateNapkinDiagram(prompt) {
+  if (!NAPKIN_API_KEY) return null;
+  try {
+    const response = await axios.post(
+      'https://api.napkin.ai/v1/generate',
+      {
+        prompt,
+        style: 'minimal',
+        format: 'png',
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${NAPKIN_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 12000,
+      }
+    );
+
+    const imageUrl = response?.data?.imageUrl || response?.data?.url || response?.data?.data?.imageUrl;
+    if (!imageUrl) return null;
+
+    const imageResponse = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
+      timeout: 12000,
+    });
+    const base64 = Buffer.from(imageResponse.data).toString('base64');
+    return `data:image/png;base64,${base64}`;
+  } catch (error) {
+    console.error('Napkin generation failed:', error.message);
+    return null;
+  }
+}
+
 async function generateAnalysis(questionAnswers) {
   if (!process.env.OPENAI_API_KEY) {
     return null;
@@ -293,6 +330,21 @@ app.post('/api/generate-report', async (req, res) => {
     }
     const analysis = normalizeAnalysis(aiRaw, seed);
 
+    // Generate diagrams with Napkin (non-blocking fallbacks)
+    const [competencyDiagram, roadmapDiagram] = await Promise.all([
+      generateNapkinDiagram(
+        `Create a clean black-and-white competency chart illustration for these scores: ${analysis.competencies
+          .map((c) => `${c.name} ${c.score}`)
+          .join(', ')}`
+      ),
+      generateNapkinDiagram(
+        `Create a minimalist timeline roadmap diagram with 3 phases:
+        Month 1: ${analysis.roadmap.month1.title}
+        Month 2: ${analysis.roadmap.month2.title}
+        Month 3: ${analysis.roadmap.month3.title}`
+      ),
+    ]);
+
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
@@ -387,6 +439,17 @@ app.post('/api/generate-report', async (req, res) => {
     doc.text('Competency Illustration', margin, y);
     y += 8;
     y = drawCompetencyBars(doc, analysis.competencies, margin, y, 120);
+    if (competencyDiagram) {
+      try {
+        const diagramWidth = 55;
+        const diagramHeight = 45;
+        const diagramX = pageWidth - margin - diagramWidth;
+        const diagramY = Math.max(55, y - 48);
+        doc.addImage(competencyDiagram, 'PNG', diagramX, diagramY, diagramWidth, diagramHeight);
+      } catch (e) {
+        console.error('Could not embed competency diagram:', e.message);
+      }
+    }
 
     // Page 3: Archetype + growth areas
     doc.addPage();
@@ -438,6 +501,13 @@ app.post('/api/generate-report', async (req, res) => {
     y += 10;
     const months = [analysis.roadmap.month1, analysis.roadmap.month2, analysis.roadmap.month3];
     drawTimeline(doc, months, margin, y, pageWidth - margin * 2);
+    if (roadmapDiagram) {
+      try {
+        doc.addImage(roadmapDiagram, 'PNG', pageWidth - margin - 58, y + 22, 58, 36);
+      } catch (e) {
+        console.error('Could not embed roadmap diagram:', e.message);
+      }
+    }
     y += 40;
 
     months.forEach((m, idx) => {
