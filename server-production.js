@@ -163,6 +163,47 @@ function normalizeAnalysis(raw, seed) {
       raw?.keyInsight,
       'Your next level will come from leverage, not effort: scale your impact through systems, clarity, and people ownership.'
     ),
+    blindSpots: Array.isArray(raw?.blindSpots) && raw.blindSpots.length
+      ? raw.blindSpots.slice(0, 4).map((s) => sanitize(s, '')).filter(Boolean)
+      : [
+        'You may be over-indexing on execution quality at the cost of strategic airtime.',
+        'Escalations can become person-dependent when decision rights are not explicit.',
+        'High standards may unintentionally reduce delegation depth if outcomes are not clearly framed.',
+        'Stakeholder updates may be too operational and not tied tightly enough to business outcomes.',
+      ],
+    strengthLevers: Array.isArray(raw?.strengthLevers) && raw.strengthLevers.length
+      ? raw.strengthLevers.slice(0, 4).map((s) => sanitize(s, '')).filter(Boolean)
+      : [
+        'Use your accountability mindset to build a consistent team operating cadence.',
+        'Turn execution discipline into measurable team-level KPIs and decision dashboards.',
+        'Translate team wins into leadership narratives for executives and cross-functional peers.',
+        'Apply coaching consistency to raise autonomy and reduce tactical dependency.',
+      ],
+    stakeholderPlaybook: Array.isArray(raw?.stakeholderPlaybook) && raw.stakeholderPlaybook.length
+      ? raw.stakeholderPlaybook.slice(0, 4).map((s) => sanitize(s, '')).filter(Boolean)
+      : [
+        'Weekly: direct manager update with risks, decisions needed, and business impact.',
+        'Bi-weekly: cross-functional sync to align priorities and unblock dependencies.',
+        'Monthly: executive narrative highlighting outcomes vs. strategy goals.',
+        'Ad-hoc: escalation protocol with clear trigger thresholds and ownership.',
+      ],
+    kpis: Array.isArray(raw?.kpis) && raw.kpis.length
+      ? raw.kpis.slice(0, 5).map((s) => sanitize(s, '')).filter(Boolean)
+      : [
+        'Percent of decisions delegated with clear owner and deadline',
+        'On-time delivery rate for committed team outcomes',
+        '1:1 completion rate and growth-action follow-through',
+        'Stakeholder confidence pulse (1-5) after weekly updates',
+        'Share of calendar spent on strategy vs. tactical execution',
+      ],
+    communicationScript: sanitize(
+      raw?.communicationScript,
+      'This month we shifted from reactive execution to clearer operating rhythms. We delegated two core workflows with defined ownership and saw faster decision cycles. Risks are now tracked with explicit thresholds and response owners. Over the next four weeks, our focus is to increase cross-functional predictability, improve stakeholder visibility, and protect strategic time so the team can scale without leadership bottlenecks.'
+    ),
+    ninetyDayOutcome: sanitize(
+      raw?.ninetyDayOutcome,
+      'If you execute this plan consistently, your team will depend less on your direct intervention, your strategic visibility will increase, and your readiness for the next leadership level will become demonstrable through measurable outcomes.'
+    ),
     competencies,
   };
 }
@@ -196,7 +237,23 @@ async function generateNapkinDiagram(prompt) {
       }
     );
 
-    const imageUrl = response?.data?.imageUrl || response?.data?.url || response?.data?.data?.imageUrl;
+    const inlineBase64 =
+      response?.data?.imageBase64 ||
+      response?.data?.base64 ||
+      response?.data?.data?.imageBase64 ||
+      null;
+
+    if (inlineBase64) {
+      return inlineBase64.startsWith('data:image/')
+        ? inlineBase64
+        : `data:image/png;base64,${inlineBase64}`;
+    }
+
+    const imageUrl =
+      response?.data?.imageUrl ||
+      response?.data?.url ||
+      response?.data?.data?.imageUrl ||
+      null;
     if (!imageUrl) return null;
 
     const imageResponse = await axios.get(imageUrl, {
@@ -226,7 +283,7 @@ async function generateAnalysis(questionAnswers) {
     '{',
     '  "leadershipScore": number 55-95,',
     '  "leadershipStage": "short stage label",',
-    '  "executiveSummary": "100-160 words",',
+    '  "executiveSummary": "140-220 words with concrete interpretation",',
     '  "competencies": [',
     '    {"name":"Strategic Thinking","score":number,"level":"Emerging|Developing|Strong|Advanced"},',
     '    {"name":"Delegation & Empowerment","score":number,"level":"..."},',
@@ -241,12 +298,18 @@ async function generateAnalysis(questionAnswers) {
     '    {"title":"...","description":"45-80 words"},',
     '    {"title":"...","description":"45-80 words"}',
     '  ],',
+    '  "blindSpots":["4 concise but specific blind spots tied to behaviors"],',
+    '  "strengthLevers":["4 practical levers the user should exploit now"],',
+    '  "stakeholderPlaybook":["4 bullets: who/what cadence/how to align"],',
+    '  "kpis":["5 measurable weekly leadership KPIs"],',
+    '  "communicationScript":"120-180 words: a sample update to executive stakeholders",',
     '  "roadmap": {',
     '    "month1":{"title":"...","actions":["3-4 concrete actions"]},',
     '    "month2":{"title":"...","actions":["3-4 concrete actions"]},',
     '    "month3":{"title":"...","actions":["3-4 concrete actions"]}',
     '  },',
-    '  "keyInsight":"1 strong sentence"',
+    '  "keyInsight":"1 strong sentence",',
+    '  "ninetyDayOutcome":"60-100 words describing likely outcome if plan is executed"',
     '}',
     '',
     'User answers:',
@@ -254,9 +317,10 @@ async function generateAnalysis(questionAnswers) {
   ].join('\n');
 
   const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'gpt-4o',
     temperature: 0.5,
     response_format: { type: 'json_object' },
+    max_tokens: 3200,
     messages: [
       { role: 'system', content: 'You generate high-quality coaching report JSON.' },
       { role: 'user', content: prompt },
@@ -425,7 +489,19 @@ function deriveDeepSections(analysis, questionAnswers) {
     'Stakeholder rhythm',
   ];
 
-  return { strengths, risks, firstWeekPlan, sampleSignals, matrixLabels };
+  return {
+    strengths,
+    risks,
+    firstWeekPlan,
+    sampleSignals,
+    matrixLabels,
+    blindSpots: analysis.blindSpots || [],
+    strengthLevers: analysis.strengthLevers || [],
+    stakeholderPlaybook: analysis.stakeholderPlaybook || [],
+    kpis: analysis.kpis || [],
+    communicationScript: analysis.communicationScript || '',
+    ninetyDayOutcome: analysis.ninetyDayOutcome || '',
+  };
 }
 
 app.post('/api/generate-report', async (req, res) => {
@@ -698,7 +774,7 @@ app.post('/api/generate-report', async (req, res) => {
       y += 1.5;
     });
 
-    // Page 6: Answer signal appendix
+    // Page 6: Answer signal appendix + strategy details
     doc.addPage();
     y = margin;
     doc.setFont('helvetica', 'bold');
@@ -718,7 +794,76 @@ app.post('/api/generate-report', async (req, res) => {
       }
     });
 
+    y += 8;
+    nextPageIfNeeded(36);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('Blind Spots to Correct Fast', margin, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    deep.blindSpots.forEach((item) => {
+      nextPageIfNeeded(8);
+      y = addWrapped(doc, `• ${item}`, margin + 2, y, pageWidth - margin * 2 - 2, 5.2);
+      y += 1;
+    });
+
+    y += 5;
+    nextPageIfNeeded(34);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('Stakeholder Playbook', margin, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    deep.stakeholderPlaybook.forEach((item) => {
+      nextPageIfNeeded(8);
+      y = addWrapped(doc, `• ${item}`, margin + 2, y, pageWidth - margin * 2 - 2, 5.2);
+      y += 1;
+    });
+
+    y += 5;
+    nextPageIfNeeded(32);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('Weekly Leadership KPIs', margin, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    deep.kpis.forEach((kpi) => {
+      nextPageIfNeeded(8);
+      y = addWrapped(doc, `• ${kpi}`, margin + 2, y, pageWidth - margin * 2 - 2, 5.2);
+      y += 1;
+    });
+
+    // Page 7: Communication script + projected outcome
+    doc.addPage();
+    y = margin;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('Executive Communication Script', margin, y);
+    y += 8;
+    doc.setFillColor(248, 248, 248);
+    doc.roundedRect(margin, y, pageWidth - margin * 2, 78, 3, 3, 'F');
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    y = addWrapped(doc, deep.communicationScript, margin + 5, y + 8, pageWidth - margin * 2 - 10, 5.2);
+
     y += 10;
+    nextPageIfNeeded(34);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('Projected 90-Day Outcome', margin, y);
+    y += 8;
+    doc.setFillColor(15, 15, 15);
+    doc.roundedRect(margin, y, pageWidth - margin * 2, 26, 3, 3, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10.5);
+    addWrapped(doc, deep.ninetyDayOutcome, margin + 5, y + 8, pageWidth - margin * 2 - 10, 5.2);
+    doc.setTextColor(20, 20, 20);
+
+    y += 34;
     nextPageIfNeeded(24);
     doc.setFillColor(15, 15, 15);
     doc.roundedRect(margin, y, pageWidth - margin * 2, 20, 3, 3, 'F');
@@ -745,6 +890,10 @@ app.post('/api/generate-report', async (req, res) => {
       pdf: pdfBase64,
       filename: `Careera-Leadership-Report-${Date.now()}.pdf`,
       analysis,
+      diagramStatus: {
+        competencyDiagramFromNapkin: Boolean(competencyDiagram),
+        roadmapDiagramFromNapkin: Boolean(roadmapDiagram),
+      },
     });
   } catch (error) {
     console.error('Error generating report:', error);
