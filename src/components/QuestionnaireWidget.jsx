@@ -314,144 +314,170 @@ export default function QuestionnaireWidget() {
         transition={{ duration: 0.5 }}
         className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-2xl sm:rounded-3xl p-4 sm:p-5 lg:p-6 shadow-2xl w-full"
       >
-        {/* Report Generation Progress - Space Theme */}
+        {/* Report Generation Progress - Hacking Theme */}
         {isGeneratingPDF && (
           <div className="mb-6">
-            <div className="text-center mb-6">
-              {/* Orbiting Animation - Space Theme */}
-              <div className="relative inline-flex items-center justify-center w-32 h-32 sm:w-40 sm:h-40 mb-6">
-                {/* Center moon */}
-                <motion.div
-                  animate={{ 
-                    rotate: 360,
-                    scale: [1, 1.05, 1]
-                  }}
-                  transition={{ 
-                    rotate: { duration: 8, repeat: Infinity, ease: "linear" },
-                    scale: { duration: 2, repeat: Infinity }
-                  }}
-                  className="absolute w-12 h-12 sm:w-16 sm:h-16 bg-white rounded-full shadow-lg shadow-white/50"
-                />
-                
-                {/* Orbit path */}
-                <motion.div
-                  className="absolute w-full h-full border-2 border-zinc-700 rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-                />
-                
-                {/* Orbiting dots */}
-                {[0, 120, 240].map((angle, idx) => (
-                  <motion.div
-                    key={idx}
-                    className="absolute w-3 h-3 sm:w-4 sm:h-4 bg-white rounded-full"
-                    style={{
-                      top: '50%',
-                      left: '50%',
-                      transformOrigin: '0 0',
-                    }}
-                    animate={{
-                      rotate: 360,
-                      opacity: [0.3, 1, 0.3]
-                    }}
-                    transition={{
-                      rotate: { duration: 12, repeat: Infinity, ease: "linear", delay: idx * 0.3 },
-                      opacity: { duration: 3, repeat: Infinity, delay: idx * 0.3 }
-                    }}
-                    initial={{ rotate: angle }}
-                  >
-                    <div className="w-full h-full translate-x-[-50%] translate-y-[-50%]" 
-                         style={{ transform: `translate(-50%, -50%) translateX(${16 * (idx % 2 === 0 ? 3.5 : 4)}px)` }} />
-                  </motion.div>
-                ))}
-                
-                {/* Stars */}
-                {[...Array(8)].map((_, idx) => (
-                  <motion.div
-                    key={`star-${idx}`}
-                    className="absolute w-1 h-1 bg-white rounded-full"
-                    style={{
-                      top: `${20 + Math.random() * 60}%`,
-                      left: `${20 + Math.random() * 60}%`,
-                    }}
-                    animate={{
-                      opacity: [0, 1, 0],
-                      scale: [0, 1.5, 0]
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      delay: idx * 0.3
-                    }}
-                  />
-                ))}
+            {/* Terminal/Console Container */}
+            <div className="bg-black border border-green-500/30 rounded-lg overflow-hidden shadow-2xl shadow-green-500/20">
+              {/* Terminal Header */}
+              <div className="bg-zinc-900 border-b border-green-500/30 px-4 py-2 flex items-center gap-2">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
+                <span className="text-green-400 text-xs sm:text-sm font-mono ml-2">
+                  careera@terminal:~$ ./decode-leadership.sh
+                </span>
               </div>
 
-              <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
-                Crafting Your Leadership Report
-              </h3>
-              <p className="text-sm text-zinc-400">
-                Analyzing your path to leadership excellence...
-              </p>
-            </div>
-
-            {/* Animated Progress Bar */}
-            <div className="bg-zinc-800 rounded-full h-2 overflow-hidden mb-4 relative">
-              <motion.div
-                className="h-full bg-gradient-to-r from-white via-zinc-300 to-white relative overflow-hidden"
-                style={{ width: `${loadingProgress}%` }}
-              >
-                {/* Shimmer effect */}
+              {/* Terminal Content */}
+              <div className="p-4 sm:p-6 font-mono text-xs sm:text-sm space-y-2 min-h-[300px]">
+                {/* Matrix-style header */}
                 <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                  animate={{ x: ['-100%', '200%'] }}
-                  transition={{ duration: 1.5, repeat: Infinity }}
-                />
-              </motion.div>
-            </div>
-
-            {/* Progress percentage */}
-            <div className="text-center mb-4">
-              <span className="text-2xl font-bold text-white">{Math.round(loadingProgress)}%</span>
-            </div>
-
-            {/* Progress Steps */}
-            <div className="space-y-3">
-              {[
-                { label: "Analyzing your current leadership situation", step: 0 },
-                { label: "Identifying your unique strengths", step: 1 },
-                { label: "Mapping growth opportunities", step: 2 },
-                { label: "Creating your personalized roadmap", step: 3 },
-              ].map((item, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0.3, x: -20 }}
-                  animate={{ 
-                    opacity: loadingStep > item.step ? 1 : (loadingStep === item.step ? 0.7 : 0.3),
-                    x: loadingStep >= item.step ? 0 : -20
-                  }}
-                  transition={{ duration: 0.5 }}
-                  className="flex items-center gap-3 text-sm text-zinc-400"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-green-400 mb-4"
                 >
-                  {loadingStep > item.step ? (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", duration: 0.5 }}
-                      className="shrink-0"
-                    >
-                      <CheckCircle className="w-5 h-5 text-white" />
-                    </motion.div>
-                  ) : loadingStep === item.step ? (
-                    <Loader className="w-5 h-5 text-white animate-spin shrink-0" />
-                  ) : (
-                    <div className="w-5 h-5 border-2 border-zinc-700 rounded-full shrink-0" />
-                  )}
-                  <span className={loadingStep >= item.step ? 'text-white' : ''}>
-                    {item.label}
-                  </span>
+                  <div className="text-base sm:text-lg font-bold mb-2">
+                    ╔═══════════════════════════════════════════════╗
+                  </div>
+                  <div className="text-center text-sm sm:text-base mb-2 text-white">
+                    🔐 DECODING YOUR CAREER DNA...
+                  </div>
+                  <div className="text-base sm:text-lg font-bold">
+                    ╚═══════════════════════════════════════════════╝
+                  </div>
                 </motion.div>
-              ))}
+
+                {/* Console Output Lines */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-cyan-400"
+                >
+                  <span className="text-green-400">$</span> Initializing neural network...
+                  <motion.span
+                    animate={{ opacity: [1, 0, 1] }}
+                    transition={{ duration: 0.8, repeat: Infinity }}
+                  > ▊</motion.span>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="text-zinc-400 text-[10px] sm:text-xs"
+                >
+                  → Loading AI models... [████████████████] 100%
+                </motion.div>
+
+                {/* Progress Steps with Console Style */}
+                <div className="space-y-3 mt-4">
+                  {[
+                    { 
+                      label: "ANALYZING LEADERSHIP PATTERNS", 
+                      detail: "Parsing management style indicators...",
+                      step: 0 
+                    },
+                    { 
+                      label: "EXTRACTING COMPETENCY MATRIX", 
+                      detail: "Calculating strategic thinking coefficients...",
+                      step: 1 
+                    },
+                    { 
+                      label: "IDENTIFYING GROWTH VECTORS", 
+                      detail: "Mapping development opportunities...",
+                      step: 2 
+                    },
+                    { 
+                      label: "COMPILING ROADMAP ALGORITHMS", 
+                      detail: "Generating 90-day action sequences...",
+                      step: 3 
+                    },
+                  ].map((item, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ 
+                        opacity: loadingStep > item.step ? 1 : (loadingStep === item.step ? 1 : 0.3),
+                        x: loadingStep >= item.step ? 0 : -20
+                      }}
+                      transition={{ duration: 0.3 }}
+                      className="border-l-2 border-green-500/30 pl-3"
+                    >
+                      <div className="flex items-start gap-2">
+                        {loadingStep > item.step ? (
+                          <span className="text-green-400 shrink-0">✓</span>
+                        ) : loadingStep === item.step ? (
+                          <motion.span
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            className="text-cyan-400 shrink-0"
+                          >
+                            ◐
+                          </motion.span>
+                        ) : (
+                          <span className="text-zinc-600 shrink-0">○</span>
+                        )}
+                        <div className="flex-1">
+                          <div className={`font-bold ${
+                            loadingStep >= item.step ? 'text-green-400' : 'text-zinc-600'
+                          }`}>
+                            {item.label}
+                          </div>
+                          {loadingStep === item.step && (
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className="text-cyan-400/70 text-[10px] sm:text-xs mt-1"
+                            >
+                              {item.detail}
+                            </motion.div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* ASCII Progress Bar */}
+                <div className="mt-6 space-y-2">
+                  <div className="text-zinc-400 text-[10px] sm:text-xs">
+                    Progress: {Math.round(loadingProgress)}%
+                  </div>
+                  <div className="font-mono text-green-400">
+                    [
+                    {Array.from({ length: 30 }).map((_, i) => (
+                      <span key={i}>
+                        {i < Math.floor((loadingProgress / 100) * 30) ? '█' : '░'}
+                      </span>
+                    ))}
+                    ]
+                  </div>
+                </div>
+
+                {/* System Messages */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="mt-4 text-yellow-400/80 text-[10px] sm:text-xs"
+                >
+                  <span className="text-yellow-500">⚡</span> Optimizing neural pathways...
+                </motion.div>
+
+                {loadingProgress > 80 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-cyan-400 text-xs sm:text-sm mt-3"
+                  >
+                    <span className="text-green-400">→</span> Finalizing leadership blueprint...
+                  </motion.div>
+                )}
+              </div>
             </div>
           </div>
         )}
