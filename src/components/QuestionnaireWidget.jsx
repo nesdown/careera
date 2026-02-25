@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, CheckCircle, Lock, Download, Loader, Sparkles, Zap, ExternalLink } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle, Download, Loader, Sparkles } from "lucide-react";
 import { getActiveQuestions, getQuestionnaireVariant, roadmapPhases } from "../data/questions";
 
 export default function QuestionnaireWidget() {
@@ -130,15 +130,16 @@ export default function QuestionnaireWidget() {
     }
   };
 
-  const openReport = () => {
-    if (!reportData?.gammaUrl) return;
-    window.open(reportData.gammaUrl, '_blank', 'noopener,noreferrer');
-  };
-
   const downloadPDF = () => {
-    if (reportData?.exportUrl) {
-      window.open(reportData.exportUrl, '_blank', 'noopener,noreferrer');
-    } else if (reportData?.gammaUrl) {
+    if (!reportData) return;
+    if (reportData.pdf) {
+      const link = document.createElement('a');
+      link.href = reportData.pdf;
+      link.download = reportData.filename || 'Careera-Leadership-Report.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else if (reportData.gammaUrl) {
       window.open(reportData.gammaUrl, '_blank', 'noopener,noreferrer');
     }
   };
@@ -150,7 +151,7 @@ export default function QuestionnaireWidget() {
     setTimeout(() => {
       alert(`Purchase confirmed! ${option === 'report' ? 'Report' : 'Report + Career Boost Call'}`);
       if (option === 'report') {
-        openReport();
+        downloadPDF();
       }
     }, 500);
   };
@@ -183,13 +184,13 @@ export default function QuestionnaireWidget() {
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <ExternalLink className="w-5 h-5 text-white" />
+                    <Download className="w-5 h-5 text-white" />
                     <h4 className="text-base sm:text-lg font-bold text-white">
                       Leadership Report Only
                     </h4>
                   </div>
                   <p className="text-xs sm:text-sm text-zinc-400 mb-3">
-                    Get your personalized 22-page interactive leadership report with AI analysis and visuals
+                    Get your personalized 10-page leadership report PDF with AI analysis and data visualizations
                   </p>
                 </div>
                 <div className="text-right ml-4">
@@ -199,12 +200,12 @@ export default function QuestionnaireWidget() {
               
               <ul className="space-y-2 mb-4">
                 {[
-                  "22+ page interactive report",
+                  "10-page detailed PDF report",
                   "6 competency deep-dives with scores",
                   "Leadership archetype identification",
                   "90-day roadmap with weekly KPIs",
-                  "AI-generated visuals & illustrations",
-                  "Shareable online link + PDF export",
+                  "Data visualizations & charts",
+                  "Instant PDF download",
                 ].map((feature) => (
                   <li key={feature} className="flex items-center gap-2 text-xs sm:text-sm text-zinc-300">
                     <CheckCircle className="w-4 h-4 text-white shrink-0" />
@@ -469,8 +470,8 @@ export default function QuestionnaireWidget() {
                 Your Leadership Report is Ready
               </h3>
               <p className="text-sm text-zinc-400">
-                {reportData?.gammaUrl
-                  ? "Your personalized 22-page interactive report has been created"
+                {reportData?.pdf
+                  ? "Your personalized 10-page report is ready to download"
                   : "Here's a preview of what we've prepared for you"}
               </p>
             </div>
@@ -486,7 +487,7 @@ export default function QuestionnaireWidget() {
                       year: 'numeric', 
                       month: 'long', 
                       day: 'numeric' 
-                    })} · 22+ Pages · Dark Theme
+                    })} · 10 Pages · PDF Document
                   </div>
                 </div>
                 <div className="px-2 py-1 bg-green-500/20 border border-green-500/30 rounded text-[10px] font-bold text-green-400">
@@ -504,15 +505,13 @@ export default function QuestionnaireWidget() {
                     {[
                       "Executive Summary & Leadership Score",
                       "6 Competency Deep-Dive Analyses",
-                      "Your Leadership Archetype Profile",
-                      "Top 3 Growth Areas with Action Steps",
-                      "Blind Spots & Strength Levers",
-                      "Stakeholder Management Playbook",
+                      "Leadership Archetype & Blind Spots",
+                      "Priority Growth Areas with Action Plans",
+                      "Stakeholder Playbook & Weekly KPIs",
                       "90-Day Roadmap (Month-by-Month)",
-                      "Weekly KPIs & Tracking Framework",
-                      "Executive Communication Script",
                       "First 7-Day Action Sprint",
-                      "AI-Generated Visuals & Illustrations",
+                      "Executive Communication Template",
+                      "Data Visualizations & Charts",
                       "Projected 90-Day Outcomes",
                     ].map((item, idx) => (
                       <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm text-zinc-300">
@@ -568,19 +567,19 @@ export default function QuestionnaireWidget() {
               </div>
               
               <h4 className="text-base sm:text-lg font-bold text-white mb-2">
-                View Your Full Interactive Report
+                Download Your Full Report
               </h4>
               <p className="text-xs sm:text-sm text-zinc-400 mb-4">
-                Your complete 22-page report with AI-generated visuals, competency analysis, 
-                90-day roadmap, and personalized action plan is ready to view.
+                Your complete 10-page PDF with competency charts, data visualizations, 
+                90-day roadmap, and personalized action plan is ready to download.
               </p>
               
               <div className="grid grid-cols-2 gap-2 mb-4">
                 {[
-                  "22+ beautifully designed pages",
-                  "AI-generated illustrations",
-                  "Interactive online viewing",
-                  "PDF export available",
+                  "10 detailed pages",
+                  "Charts & data visualizations",
+                  "Instant PDF download",
+                  "Professional document format",
                 ].map((feature) => (
                   <div
                     key={feature}

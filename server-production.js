@@ -279,19 +279,20 @@ async function generateAnalysis(questionAnswers) {
   return parseAiJson(completion.choices?.[0]?.message?.content || '');
 }
 
-async function findDarkTheme() {
+async function findTheme(query = 'Sales Presentation') {
   if (!GAMMA_API_KEY) return null;
   try {
     const response = await axios.get(`${GAMMA_API_BASE}/themes`, {
-      params: { query: 'dark', limit: 10 },
+      params: { query, limit: 10 },
       headers: { 'X-API-KEY': GAMMA_API_KEY },
       timeout: 10000,
     });
     const themes = response.data?.data || [];
-    const standardDark = themes.find(t => /standard.*dark/i.test(t.name));
-    return standardDark?.id || themes[0]?.id || null;
+    console.log('Available themes for query:', query, themes.map(t => `${t.name} (${t.id})`));
+    const exact = themes.find(t => t.name?.toLowerCase() === query.toLowerCase());
+    return exact?.id || themes[0]?.id || null;
   } catch (err) {
-    console.error('Failed to fetch dark themes:', err.message);
+    console.error('Failed to fetch themes:', err.message);
     return null;
   }
 }
@@ -304,118 +305,118 @@ function buildGammaInputText(analysis) {
 
   const cards = [];
 
-  cards.push(`# CAREERA
-## Leadership Readiness Report
-
-Your Personalized Path from Manager to Respected Leader
+  // Page 1: Cover + Executive Summary
+  cards.push(`# CAREERA — Leadership Readiness Report
 
 **Assessment Date:** ${date}
 **Leadership Stage:** ${analysis.leadershipStage}
-**Overall Score:** ${analysis.leadershipScore}/100
+**Overall Leadership Score:** ${analysis.leadershipScore}/100
+**Leadership Archetype:** ${analysis.archetype.name}
 
-> "Leadership is not a title change. It is an operating system change — from personal output to multiplied impact."`);
-
-  cards.push(`# Executive Summary
-## Your Leadership Profile at a Glance
-
-**Overall Leadership Score: ${analysis.leadershipScore}/100**
-**Current Stage: ${analysis.leadershipStage}**
-**Leadership Archetype: ${analysis.archetype.name}**
+## Executive Summary
 
 ${analysis.executiveSummary}
 
 **Strongest Competency:** ${strongest.name} (${strongest.score}/100)
-**Biggest Growth Opportunity:** ${weakest.name} (${weakest.score}/100)`);
+**Biggest Growth Opportunity:** ${weakest.name} (${weakest.score}/100)
+**Score Gap:** ${strongest.score - weakest.score} points — ${strongest.score - weakest.score > 20 ? 'indicating clear priorities for focused development' : 'showing a well-rounded profile with room for targeted growth'}`);
 
-  cards.push(`# Competency Overview
-## Your Leadership Scoring Breakdown
+  // Page 2: Full Competency Breakdown (chart-friendly data)
+  cards.push(`# Leadership Competency Analysis
 
-${analysis.competencies.map(c => `**${c.name}** — ${c.score}/100 (${c.level})`).join('\n\n')}
+Below is your scoring across all six leadership dimensions. Use these scores to prioritize your development efforts.
 
-Your strongest area is **${strongest.name}** and your primary growth opportunity is in **${weakest.name}**. The gap between your top and bottom scores is ${strongest.score - weakest.score} points — ${strongest.score - weakest.score > 20 ? 'indicating clear priorities for focused development' : 'showing a well-rounded profile with room for targeted growth'}.`);
+${analysis.competencies.map(c => {
+    const bar = '█'.repeat(Math.round(c.score / 5)) + '░'.repeat(20 - Math.round(c.score / 5));
+    return `**${c.name}** — ${c.score}/100 (${c.level})
+${bar}`;
+  }).join('\n\n')}
 
-  analysis.competencies.forEach(c => {
-    const deepDive = c.deepDive || `At the ${c.level} level, you demonstrate foundational capability in ${c.name.toLowerCase()}. To advance, focus on building repeatable systems and measurable outcomes in this area. Seek feedback from peers and stakeholders, and track your progress weekly against specific behavioral indicators.`;
-    cards.push(`# ${c.name}
-## Score: ${c.score}/100 — ${c.level}
+## Score Distribution Summary
+- **Advanced (85+):** ${analysis.competencies.filter(c => c.score >= 85).map(c => c.name).join(', ') || 'None yet'}
+- **Strong (75-84):** ${analysis.competencies.filter(c => c.score >= 75 && c.score < 85).map(c => c.name).join(', ') || 'None'}
+- **Developing (65-74):** ${analysis.competencies.filter(c => c.score >= 65 && c.score < 75).map(c => c.name).join(', ') || 'None'}
+- **Emerging (<65):** ${analysis.competencies.filter(c => c.score < 65).map(c => c.name).join(', ') || 'None'}`);
+
+  // Page 3: Competency Deep Dives (all 6 in one dense page)
+  cards.push(`# Competency Deep Dives
+
+${analysis.competencies.map(c => {
+    const deepDive = c.deepDive || `At the ${c.level} level, you demonstrate foundational capability in ${c.name.toLowerCase()}. To advance, focus on building repeatable systems and measurable outcomes. Seek feedback from peers and stakeholders, and track your progress weekly.`;
+    const levelAdvice = c.level === 'Advanced' ? 'Focus on teaching and scaling this skill across your team.' : c.level === 'Strong' ? 'Make this skill visible to senior leadership and mentor others.' : c.level === 'Developing' ? 'Prioritize deliberate practice and seek stretch assignments.' : 'Start with small, consistent actions and build confidence through quick wins.';
+    return `## ${c.name} — ${c.score}/100 (${c.level})
 
 ${deepDive}
 
-**What ${c.level} means:**
-${c.level === 'Advanced' ? 'You consistently demonstrate excellence in this area. Focus on teaching and scaling this skill across your team.' : c.level === 'Strong' ? 'You show solid capability here. The next step is making this skill visible to senior leadership and mentoring others.' : c.level === 'Developing' ? 'You have a foundation to build on. Prioritize deliberate practice and seek stretch assignments in this domain.' : 'This is your biggest growth opportunity. Start with small, consistent actions and build confidence through quick wins.'}`);
-  });
+**Next Step:** ${levelAdvice}`;
+  }).join('\n\n')}`);
 
-  cards.push(`# Your Leadership Archetype
-## ${analysis.archetype.name}
+  // Page 4: Archetype + Blind Spots + Strength Levers
+  cards.push(`# Your Leadership Profile
+
+## Archetype: ${analysis.archetype.name}
 
 ${analysis.archetype.description}
 
-**Your Core Traits:**
+**Core Traits:**
 ${analysis.archetype.traits.map(t => `- ${t}`).join('\n')}
 
-Understanding your archetype helps you leverage your natural strengths while being aware of your default patterns that may limit growth at the next level.`);
+## Blind Spots to Address
 
-  analysis.topGrowthAreas.forEach((area, idx) => {
-    cards.push(`# Growth Area ${idx + 1}: ${area.title}
-## Priority Development Focus
+${analysis.blindSpots.map((s, i) => `${i + 1}. ${s}`).join('\n')}
+
+## Strength Levers to Exploit
+
+${analysis.strengthLevers.map((s, i) => `${i + 1}. ${s}`).join('\n')}`);
+
+  // Page 5: Top Growth Areas with action steps
+  cards.push(`# Priority Growth Areas & Action Plans
+
+${analysis.topGrowthAreas.map((area, idx) => `## ${idx + 1}. ${area.title}
 
 ${area.description}
 
 **Action Steps:**
-${area.actionSteps.map((s, i) => `${i + 1}. ${s}`).join('\n')}`);
-  });
+${area.actionSteps.map((s, i) => `${i + 1}. ${s}`).join('\n')}`).join('\n\n')}`);
 
-  cards.push(`# Blind Spots to Address
-## What You Might Be Missing
+  // Page 6: Stakeholder Playbook + KPIs
+  cards.push(`# Stakeholder Strategy & Leadership KPIs
 
-These are patterns in your responses that suggest areas where your self-perception may not match how others experience your leadership:
+## Stakeholder Management Playbook
 
-${analysis.blindSpots.map((s, i) => `**${i + 1}.** ${s}`).join('\n\n')}
+${analysis.stakeholderPlaybook.map((s, i) => `${i + 1}. ${s}`).join('\n')}
 
-> Awareness of blind spots is the first step. The next step is asking for direct feedback from your team and peers on these specific areas.`);
+**Pro Tip:** Map your top 5 stakeholders on a 2×2 matrix of Influence (high/low) × Alignment (high/low). Invest most energy in high-influence, low-alignment relationships.
 
-  cards.push(`# Your Strength Levers
-## Maximize What You Already Do Well
+## Weekly Leadership KPIs
 
-Instead of only fixing weaknesses, these are concrete ways to amplify your existing strengths for outsized impact:
+Track these leading indicators every week:
 
-${analysis.strengthLevers.map((s, i) => `**${i + 1}.** ${s}`).join('\n\n')}`);
+${analysis.kpis.map((k, i) => `${i + 1}. ${k}`).join('\n')}`);
 
-  cards.push(`# Stakeholder Playbook
-## Build Strategic Relationships That Accelerate Your Career
+  // Page 7: 90-Day Roadmap (all 3 months)
+  const months = [analysis.roadmap.month1, analysis.roadmap.month2, analysis.roadmap.month3];
+  cards.push(`# 90-Day Leadership Roadmap
 
-${analysis.stakeholderPlaybook.map(s => `- ${s}`).join('\n')}
+${months.map((m, idx) => `## Month ${idx + 1}: ${m.title} — ${m.theme}
 
-**Pro Tip:** Map your top 5 stakeholders on a 2x2 matrix of Influence (high/low) × Alignment (high/low). Invest most energy in high-influence, low-alignment relationships — that is where the leverage is.`);
-
-  const months = [
-    { ...analysis.roadmap.month1, num: 1 },
-    { ...analysis.roadmap.month2, num: 2 },
-    { ...analysis.roadmap.month3, num: 3 },
-  ];
-  months.forEach(m => {
-    cards.push(`# Month ${m.num}: ${m.title}
-## 90-Day Roadmap — ${m.theme}
-
-**Focus Actions:**
 ${m.actions.map((a, i) => `${i + 1}. ${a}`).join('\n')}
 
-**Success Criteria:** By the end of month ${m.num}, you should be able to demonstrate measurable progress on each of these actions to your manager or mentor.`);
-  });
+**Success Criteria:** Demonstrate measurable progress on each action to your manager by end of month ${idx + 1}.`).join('\n\n')}`);
 
-  cards.push(`# Weekly Leadership KPIs
-## Track Your Progress Every Week
+  // Page 8: First 7 Days Action Sprint
+  cards.push(`# First 7-Day Action Sprint
 
-These are the leading indicators that predict leadership growth. Track them weekly:
+Launch your leadership transformation this week with one focused action per day:
 
-${analysis.kpis.map((k, i) => `**${i + 1}.** ${k}`).join('\n\n')}
+${analysis.firstWeekPlan.map((s, i) => `**Day ${i + 1}:** ${s}`).join('\n\n')}
 
-> Create a simple spreadsheet or dashboard to track these weekly. Review trends monthly. Share progress with your manager to build visibility.`);
+Each action is designed to build on the previous day. By day 7, you will have established new operating habits that compound over the 90-day plan.`);
 
-  cards.push(`# Executive Communication Script
-## Ready-to-Use Stakeholder Update Template
+  // Page 9: Executive Communication Script
+  cards.push(`# Executive Communication Template
 
-Use this as a template for your monthly updates to senior leadership:
+Use this ready-to-send template for your monthly updates to senior leadership. Customize the specifics, but keep the structure:
 
 ---
 
@@ -423,38 +424,29 @@ ${analysis.communicationScript}
 
 ---
 
-**Structure to follow:** Context → Key Decisions → Impact → Next Steps → Risks`);
+**Recommended Structure:**
+1. **Context** — What happened and why it matters
+2. **Key Decisions** — What was decided and by whom
+3. **Impact** — Measurable results and business outcomes
+4. **Next Steps** — What is coming in the next period
+5. **Risks** — What could go wrong and how you are mitigating it`);
 
-  cards.push(`# Your First 7 Days
-## Action Sprint to Build Momentum
-
-Start your transformation this week with one focused action per day:
-
-${analysis.firstWeekPlan.map((s, i) => `**Day ${i + 1}:** ${s}`).join('\n\n')}`);
-
-  cards.push(`# Projected 90-Day Outcome
-## What Success Looks Like
+  // Page 10: Projected Outcome + CTA
+  cards.push(`# Your 90-Day Projected Outcome
 
 ${analysis.ninetyDayOutcome}
 
+> **Key Insight:** ${analysis.keyInsight}
+
 ---
 
-> **Key Insight:** ${analysis.keyInsight}`);
-
-  cards.push(`# What's Next?
-## Your Leadership Transformation Starts Now
-
-**Three steps to accelerate your growth:**
+## What's Next?
 
 1. **Review this report** — identify your top 3 action items and put them in your calendar this week
-2. **Book your strategy call** — get personalized coaching guidance from a leadership expert at Careera
-3. **Start your 90-day plan** — turn these insights into measurable results that get you promoted
+2. **Book your strategy call** — get personalized coaching from a leadership expert at Careera
+3. **Execute your 90-day plan** — turn these insights into measurable results
 
----
-
-Visit **careera.co** to book your leadership coaching call.
-
-> "The best time to invest in your leadership was yesterday. The second best time is today."`);
+Visit **careera.co** to book your leadership coaching call.`);
 
   return cards.join('\n---\n');
 }
@@ -463,10 +455,11 @@ async function createGammaGeneration(inputText, themeId) {
   const body = {
     inputText,
     textMode: 'preserve',
-    format: 'presentation',
-    numCards: 22,
+    format: 'document',
+    numCards: 10,
+    cardSplit: 'inputTextBreaks',
     exportAs: 'pdf',
-    additionalInstructions: 'Use a dark, premium design with dark backgrounds and light text throughout. Include relevant visual elements, icons, charts, and diagrams on every card. Make each card visually rich with clear hierarchy. Use bold section headers, clean typography, and professional spacing. The report should feel like a $500 executive coaching deliverable. Add visual separators, accent colors, and layout variety across cards.',
+    additionalInstructions: 'Create data visualizations, charts, bar graphs, and score breakdowns wherever numbers or scores appear. Use tables for structured data like KPIs and roadmap actions. Add visual separators and accent elements between sections. Make it feel like a premium consulting deliverable with clean typography and professional layout. Do NOT add any photos or illustrations — only use charts, graphs, tables, and data visualizations.',
     textOptions: {
       amount: 'extensive',
       tone: 'professional, empowering, strategic, direct',
@@ -474,11 +467,10 @@ async function createGammaGeneration(inputText, themeId) {
       language: 'en',
     },
     imageOptions: {
-      source: 'aiGenerated',
-      style: 'dark themed, minimal professional illustrations, abstract geometric patterns representing leadership and growth, cosmic/space-inspired accents with dark backgrounds, clean modern design',
+      source: 'noImages',
     },
     cardOptions: {
-      dimensions: '16x9',
+      dimensions: 'a4',
       headerFooter: {
         bottomRight: { type: 'cardNumber' },
         topRight: { type: 'text', value: 'CAREERA' },
@@ -553,7 +545,7 @@ app.post('/api/generate-report', async (req, res) => {
     }));
     const seed = hashString(JSON.stringify(questionAnswers));
 
-    console.log('Step 1/4: Generating AI analysis...');
+    console.log('Step 1/5: Generating AI analysis...');
     let aiRaw = null;
     try {
       aiRaw = await generateAnalysis(questionAnswers);
@@ -562,27 +554,54 @@ app.post('/api/generate-report', async (req, res) => {
     }
     const analysis = normalizeAnalysis(aiRaw, seed);
 
-    console.log('Step 2/4: Finding dark theme...');
-    const darkThemeId = await findDarkTheme();
-    console.log('Dark theme ID:', darkThemeId || 'none found, using additionalInstructions');
+    console.log('Step 2/5: Finding Sales Presentation theme...');
+    const themeId = await findTheme('Sales Presentation');
+    console.log('Theme ID:', themeId || 'none found, using default');
 
-    console.log('Step 3/4: Creating Gamma generation...');
+    console.log('Step 3/5: Creating Gamma generation...');
     const inputText = buildGammaInputText(analysis);
-    const generation = await createGammaGeneration(inputText, darkThemeId);
+    const generation = await createGammaGeneration(inputText, themeId);
     const generationId = generation.generationId;
     console.log('Gamma generation created:', generationId);
 
-    console.log('Step 4/4: Polling for completion...');
+    console.log('Step 4/5: Polling for completion...');
     const result = await pollGammaGeneration(generationId);
-    console.log('Gamma generation complete. Full response:', JSON.stringify(result));
+    console.log('Gamma generation complete. Full response keys:', Object.keys(result));
+    console.log('Gamma result:', JSON.stringify(result).substring(0, 500));
 
+    // Extract all possible URL fields from the response
     const gammaUrl = result.gammaUrl || result.gamma_url || result.url || null;
-    const exportUrl = result.exportUrl || result.export_url || result.fileUrl || result.file_url || result.pdfUrl || result.pdf_url || result.file?.url || null;
+    const exportUrl = result.exportUrl || result.export_url || result.fileUrl
+      || result.file_url || result.pdfUrl || result.pdf_url
+      || result.file?.url || result.downloadUrl || result.download_url || null;
+
+    // Step 5: Download the PDF and return as base64 for direct download
+    let pdfBase64 = null;
+    const pdfDownloadUrl = exportUrl || null;
+
+    if (pdfDownloadUrl) {
+      console.log('Step 5/5: Downloading PDF from export URL...');
+      try {
+        const pdfResponse = await axios.get(pdfDownloadUrl, {
+          responseType: 'arraybuffer',
+          headers: { 'X-API-KEY': GAMMA_API_KEY },
+          timeout: 60000,
+        });
+        const base64 = Buffer.from(pdfResponse.data).toString('base64');
+        pdfBase64 = `data:application/pdf;base64,${base64}`;
+        console.log('PDF downloaded successfully, size:', pdfResponse.data.length, 'bytes');
+      } catch (dlErr) {
+        console.error('Failed to download PDF from export URL:', dlErr.message);
+      }
+    } else {
+      console.log('Step 5/5: No direct export URL found in response. gammaUrl:', gammaUrl);
+    }
 
     res.json({
       success: true,
+      pdf: pdfBase64,
       gammaUrl,
-      exportUrl,
+      filename: `Careera-Leadership-Report-${Date.now()}.pdf`,
       generationId,
       analysis,
     });
