@@ -1,17 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, ArrowLeft, CheckCircle, Lock, Calendar, Download, Loader } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle, Lock, Download, Loader, Sparkles, Zap } from "lucide-react";
 import { getActiveQuestions, getQuestionnaireVariant, roadmapPhases } from "../data/questions";
 
 export default function QuestionnaireWidget() {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState({});
   const [isComplete, setIsComplete] = useState(false);
-  const [showCalendly, setShowCalendly] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
+  const [selectedOption, setSelectedOption] = useState(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [pdfGenerated, setPdfGenerated] = useState(false);
   const [pdfData, setPdfData] = useState(null);
-  const [hasBooked, setHasBooked] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingStep, setLoadingStep] = useState(0);
   
@@ -153,43 +153,24 @@ export default function QuestionnaireWidget() {
     document.body.removeChild(link);
   };
 
-  // Listen for Calendly booking completion
-  useEffect(() => {
-    const handleCalendlyEvent = (e) => {
-      if (e.data.event === 'calendly.event_scheduled') {
-        // User booked a call - mark as booked and show download
-        setHasBooked(true);
-        setTimeout(() => {
-          alert('Thank you for booking! You can now download your Leadership Report.');
-        }, 1000);
+  const handlePurchase = (option) => {
+    setSelectedOption(option);
+    // TODO: Integrate payment here
+    console.log(`User selected: ${option}`);
+    
+    // For now, just simulate purchase and allow download
+    setTimeout(() => {
+      alert(`Purchase confirmed! ${option === 'report' ? 'Report' : 'Report + Career Boost Call'}`);
+      if (option === 'report') {
+        downloadPDF();
       }
-    };
+    }, 500);
+  };
 
-    window.addEventListener('message', handleCalendlyEvent);
-    return () => window.removeEventListener('message', handleCalendlyEvent);
-  }, []);
-
-  // Initialize Calendly widget when showCalendly becomes true
-  useEffect(() => {
-    if (showCalendly && window.Calendly) {
-      const timer = setTimeout(() => {
-        const widgetElement = document.querySelector('.calendly-inline-widget');
-        if (widgetElement && !widgetElement.querySelector('iframe')) {
-          // Manually initialize the widget with updated parameters
-          window.Calendly.initInlineWidget({
-            url: 'https://calendly.com/careera-roadmap/careera-roadmap-review?hide_event_type_details=1&hide_gdpr_banner=1&background_color=0c0c0c&text_color=ffffff&primary_color=ffffff',
-            parentElement: widgetElement,
-          });
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [showCalendly]);
-
-  // Show completion/results view or Calendly
+  // Show completion/results view or pricing
   if (isComplete) {
-    // Show Calendly embed as final step
-    if (showCalendly) {
+    // Show pricing options
+    if (showPricing) {
       return (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -197,76 +178,129 @@ export default function QuestionnaireWidget() {
           transition={{ duration: 0.5 }}
           className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden w-full"
         >
-          {/* Dark Header */}
+          {/* Header */}
           <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-zinc-800 bg-zinc-900">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex-1">
-                <h3 className="text-lg sm:text-xl font-bold text-white mb-1">
-                  Schedule Your Leadership Call
-                </h3>
-                <p className="text-xs sm:text-sm text-zinc-400">
-                  {hasBooked ? '✓ Booking confirmed! Download your report below.' : 'Choose a time that works best for you'}
-                </p>
-              </div>
-              {pdfGenerated && hasBooked && (
-                <button
-                  onClick={downloadPDF}
-                  className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-zinc-100 text-black rounded-lg text-xs sm:text-sm font-semibold transition-colors shadow-lg"
-                >
-                  <Download className="w-4 h-4" />
-                  <span className="hidden sm:inline">Download Report</span>
-                  <span className="sm:hidden">Get PDF</span>
-                </button>
-              )}
-            </div>
+            <h3 className="text-lg sm:text-xl font-bold text-white mb-1">
+              Get Your Leadership Report
+            </h3>
+            <p className="text-xs sm:text-sm text-zinc-400">
+              Choose the option that fits your needs
+            </p>
+          </div>
 
-            {/* Benefits Pills */}
-            {!hasBooked && (
-              <div className="flex flex-wrap gap-2">
+          {/* Pricing Options */}
+          <div className="p-4 sm:p-6 space-y-4">
+            {/* Option 1: Report Only */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => handlePurchase('report')}
+              className="bg-zinc-900/50 border-2 border-zinc-700 hover:border-white/30 rounded-xl p-4 sm:p-6 cursor-pointer transition-all group"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Download className="w-5 h-5 text-white" />
+                    <h4 className="text-base sm:text-lg font-bold text-white">
+                      Leadership Report Only
+                    </h4>
+                  </div>
+                  <p className="text-xs sm:text-sm text-zinc-400 mb-3">
+                    Get your personalized 6-page leadership report with AI analysis
+                  </p>
+                </div>
+                <div className="text-right ml-4">
+                  <div className="text-2xl sm:text-3xl font-bold text-white">$9.99</div>
+                </div>
+              </div>
+              
+              <ul className="space-y-2 mb-4">
                 {[
-                  "30-minute intro call",
-                  "Full report review",
-                  "Custom roadmap",
-                ].map((benefit) => (
-                  <span
-                    key={benefit}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/10 border border-white/20 rounded-full text-[10px] sm:text-xs text-white"
-                  >
-                    <CheckCircle className="w-3 h-3" />
-                    {benefit}
-                  </span>
+                  "Personalized leadership analysis",
+                  "6 competency scores",
+                  "Leadership archetype identification",
+                  "90-day action roadmap",
+                  "Instant PDF download",
+                ].map((feature) => (
+                  <li key={feature} className="flex items-center gap-2 text-xs sm:text-sm text-zinc-300">
+                    <CheckCircle className="w-4 h-4 text-white shrink-0" />
+                    {feature}
+                  </li>
                 ))}
+              </ul>
+
+              <button className="w-full bg-white text-black px-4 py-3 rounded-lg font-semibold hover:bg-zinc-200 transition-colors">
+                Get Report - $9.99
+              </button>
+            </motion.div>
+
+            {/* Option 2: Report + Career Boost Call */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => handlePurchase('report-call')}
+              className="relative bg-gradient-to-br from-white/10 to-zinc-900/50 border-2 border-white/40 rounded-xl p-4 sm:p-6 cursor-pointer transition-all overflow-hidden group"
+            >
+              {/* Popular badge */}
+              <div className="absolute top-4 right-4 px-2 py-1 bg-white text-black rounded-full text-[10px] font-bold">
+                BEST VALUE
               </div>
-            )}
+
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="w-5 h-5 text-white" />
+                    <h4 className="text-base sm:text-lg font-bold text-white">
+                      Report + Career Boost Call
+                    </h4>
+                  </div>
+                  <p className="text-xs sm:text-sm text-zinc-300 mb-1">
+                    Everything in the report, plus 30-minute strategy call with a leadership coach
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-500 line-through">$134.99</span>
+                    <span className="text-xs text-white font-bold">Save $105!</span>
+                  </div>
+                </div>
+                <div className="text-right ml-4">
+                  <div className="text-2xl sm:text-3xl font-bold text-white">$29.99</div>
+                </div>
+              </div>
+              
+              <ul className="space-y-2 mb-4">
+                {[
+                  "Everything in the report",
+                  "30-minute 1-on-1 strategy call",
+                  "Personalized action plan review",
+                  "Answer your specific questions",
+                  "Career roadmap guidance",
+                  "Book your preferred time",
+                ].map((feature) => (
+                  <li key={feature} className="flex items-center gap-2 text-xs sm:text-sm text-zinc-200">
+                    <CheckCircle className="w-4 h-4 text-white shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                className="w-full bg-white text-black px-4 py-3 rounded-lg font-semibold hover:bg-zinc-100 transition-colors shadow-lg"
+              >
+                Get Report + Call - $29.99
+              </motion.button>
+            </motion.div>
           </div>
 
-          {/* Calendly Embed with Dark Integration */}
-          <div className="relative bg-zinc-950">
-            {/* Calendly iframe container - now with matching dark background */}
-            <div className="bg-zinc-950 px-4 sm:px-6 py-6">
-              <div 
-                className="calendly-inline-widget" 
-                style={{
-                  minWidth: '320px',
-                  height: '700px',
-                  width: '100%'
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Dark Footer */}
-          <div className="px-4 sm:px-6 py-4 border-t border-zinc-800 bg-zinc-900 flex items-center justify-between">
+          {/* Footer */}
+          <div className="px-4 sm:px-6 py-4 border-t border-zinc-800 bg-zinc-900">
             <button
-              onClick={() => setShowCalendly(false)}
+              onClick={() => setShowPricing(false)}
               className="text-xs sm:text-sm text-zinc-400 hover:text-white transition-colors flex items-center gap-1"
             >
               <ArrowLeft className="w-3 h-3" />
-              Back to Results
+              Back to Preview
             </button>
-            <div className="text-[10px] sm:text-xs text-zinc-500">
-              Secure & confidential
-            </div>
           </div>
         </motion.div>
       );
@@ -569,7 +603,7 @@ export default function QuestionnaireWidget() {
               </div>
 
               <motion.button
-                onClick={() => setShowCalendly(true)}
+                onClick={() => setShowPricing(true)}
                 whileTap={{ scale: 0.98 }}
                 animate={{
                   boxShadow: [
@@ -581,8 +615,8 @@ export default function QuestionnaireWidget() {
                 transition={{ duration: 2, repeat: Infinity }}
                 className="w-full flex items-center justify-center gap-2 bg-white text-black px-5 py-3 sm:py-3.5 rounded-full text-sm sm:text-base font-semibold hover:bg-zinc-100 transition-colors cursor-pointer"
               >
-                <Calendar className="w-4 h-4" />
-                <span>Book Call & Unlock Full Report</span>
+                <Sparkles className="w-4 h-4" />
+                <span>Get Your Leadership Report</span>
                 <ArrowRight className="w-4 h-4" />
               </motion.button>
               
