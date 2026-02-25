@@ -17,7 +17,21 @@ const PORT = process.env.PORT || 8080;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(join(__dirname, 'dist')));
+const distPath = join(__dirname, 'dist');
+
+app.use('/assets', express.static(join(distPath, 'assets'), {
+  immutable: true,
+  maxAge: '1y',
+}));
+
+app.use(express.static(distPath, {
+  maxAge: '1h',
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('index.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+  },
+}));
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -299,9 +313,9 @@ Provide your analysis in the following JSON structure:
   }
 });
 
-// Serve index.html for all other routes (SPA support)
-app.get('*', (req, res) => {
-  res.sendFile(join(__dirname, 'dist', 'index.html'));
+// SPA fallback only for app routes (never for files/assets/api)
+app.get(/^\/(?!api\/)(?!.*\.).*/, (req, res) => {
+  res.sendFile(join(distPath, 'index.html'));
 });
 
 app.listen(PORT, () => {
