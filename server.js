@@ -313,6 +313,121 @@ function drawTimeline(doc, months, x, y, width) {
   });
 }
 
+function drawRadarChart(doc, competencies, centerX, centerY, radius = 24) {
+  const count = competencies.length;
+  if (!count) return;
+
+  // Grid rings
+  doc.setDrawColor(220, 220, 220);
+  [0.25, 0.5, 0.75, 1].forEach((ratio) => {
+    const points = [];
+    for (let i = 0; i < count; i += 1) {
+      const angle = (-Math.PI / 2) + ((Math.PI * 2) * i) / count;
+      points.push({
+        x: centerX + Math.cos(angle) * radius * ratio,
+        y: centerY + Math.sin(angle) * radius * ratio,
+      });
+    }
+    for (let i = 0; i < points.length; i += 1) {
+      const p1 = points[i];
+      const p2 = points[(i + 1) % points.length];
+      doc.line(p1.x, p1.y, p2.x, p2.y);
+    }
+  });
+
+  // Axis lines
+  doc.setDrawColor(190, 190, 190);
+  for (let i = 0; i < count; i += 1) {
+    const angle = (-Math.PI / 2) + ((Math.PI * 2) * i) / count;
+    doc.line(centerX, centerY, centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius);
+  }
+
+  // Data polygon
+  const dataPoints = competencies.map((c, i) => {
+    const angle = (-Math.PI / 2) + ((Math.PI * 2) * i) / count;
+    const r = radius * (Math.max(40, Math.min(100, c.score)) / 100);
+    return {
+      x: centerX + Math.cos(angle) * r,
+      y: centerY + Math.sin(angle) * r,
+    };
+  });
+  doc.setDrawColor(20, 20, 20);
+  doc.setLineWidth(1.2);
+  for (let i = 0; i < dataPoints.length; i += 1) {
+    const p1 = dataPoints[i];
+    const p2 = dataPoints[(i + 1) % dataPoints.length];
+    doc.line(p1.x, p1.y, p2.x, p2.y);
+    doc.setFillColor(20, 20, 20);
+    doc.circle(p1.x, p1.y, 1.2, 'F');
+  }
+}
+
+function drawPriorityMatrix(doc, x, y, width, height, labels) {
+  const midX = x + width / 2;
+  const midY = y + height / 2;
+  doc.setDrawColor(190, 190, 190);
+  doc.rect(x, y, width, height);
+  doc.line(midX, y, midX, y + height);
+  doc.line(x, midY, x + width, midY);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('HIGH IMPACT', x + 3, y + 6);
+  doc.text('LOW IMPACT', x + width - 24, y + 6);
+  doc.text('LOW EFFORT', x + 3, y + height - 3);
+  doc.text('HIGH EFFORT', x + width - 24, y + height - 3);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  const safe = labels.slice(0, 4);
+  const quadrants = [
+    { tx: x + 3, ty: y + 16 }, // high impact low effort
+    { tx: midX + 3, ty: y + 16 }, // low impact low effort
+    { tx: x + 3, ty: midY + 12 }, // high impact high effort
+    { tx: midX + 3, ty: midY + 12 }, // low impact high effort
+  ];
+  safe.forEach((label, idx) => {
+    const lines = doc.splitTextToSize(label, width / 2 - 6);
+    doc.text(lines, quadrants[idx].tx, quadrants[idx].ty);
+  });
+}
+
+function deriveDeepSections(analysis, questionAnswers) {
+  const strengths = [
+    `You score highest in ${analysis.competencies.sort((a, b) => b.score - a.score)[0].name}, indicating strong leadership instincts in this domain.`,
+    'Your answers suggest a high-ownership mindset and willingness to take accountability for outcomes.',
+    'You demonstrate growth intent, which is one of the strongest predictors of manager-to-leader transitions.',
+    'You already show pattern-recognition in team dynamics, which supports better coaching decisions.',
+  ];
+
+  const risks = [
+    `The biggest gap is ${analysis.competencies.sort((a, b) => a.score - b.score)[0].name}; without action, this may slow promotion readiness.`,
+    'Current execution load may be crowding out strategic work, reducing leadership leverage.',
+    'Stakeholder communication may still be reactive instead of proactively aligned.',
+    'Without a repeatable operating cadence, you risk dependency on heroics.',
+  ];
+
+  const firstWeekPlan = [
+    'Block 90 minutes to define top 3 leadership priorities for this quarter.',
+    'Redesign one recurring meeting to focus on outcomes, not status.',
+    'Delegate one recurring task with explicit ownership criteria.',
+    'Send a stakeholder update with context, decision, and impact format.',
+    'Run one coaching-focused 1:1 centered on capability growth.',
+    'Create a simple KPI dashboard with 3 leading indicators.',
+    'Close the week with a 20-minute reflection: what only you can do next week.',
+  ];
+
+  const sampleSignals = questionAnswers.slice(0, 5).map((q) => `Q${q.questionId}: "${q.answer}"`);
+  const matrixLabels = [
+    analysis.topGrowthAreas[0]?.title || 'Delegation',
+    analysis.topGrowthAreas[1]?.title || 'Communication',
+    analysis.topGrowthAreas[2]?.title || 'Systems',
+    'Stakeholder rhythm',
+  ];
+
+  return { strengths, risks, firstWeekPlan, sampleSignals, matrixLabels };
+}
+
 app.post('/api/generate-report', async (req, res) => {
   try {
     const { answers = {}, variant } = req.body || {};
@@ -329,6 +444,7 @@ app.post('/api/generate-report', async (req, res) => {
       console.error('AI analysis failed, using fallback:', e.message);
     }
     const analysis = normalizeAnalysis(aiRaw, seed);
+    const deep = deriveDeepSections(analysis, questionAnswers);
 
     // Generate diagrams with Napkin (non-blocking fallbacks)
     const [competencyDiagram, roadmapDiagram] = await Promise.all([
@@ -439,6 +555,10 @@ app.post('/api/generate-report', async (req, res) => {
     doc.text('Competency Illustration', margin, y);
     y += 8;
     y = drawCompetencyBars(doc, analysis.competencies, margin, y, 120);
+    drawRadarChart(doc, analysis.competencies, pageWidth - 40, 96, 26);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('Leadership Radar', pageWidth - 58, 128);
     if (competencyDiagram) {
       try {
         const diagramWidth = 55;
@@ -492,6 +612,34 @@ app.post('/api/generate-report', async (req, res) => {
       y += 28;
     });
 
+    y += 3;
+    nextPageIfNeeded(40);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('Where You Are Strongest', margin, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    deep.strengths.forEach((item) => {
+      nextPageIfNeeded(8);
+      y = addWrapped(doc, `• ${item}`, margin + 2, y, pageWidth - margin * 2 - 2, 5.3);
+      y += 1;
+    });
+
+    y += 3;
+    nextPageIfNeeded(40);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('Execution Risks to Eliminate', margin, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    deep.risks.forEach((item) => {
+      nextPageIfNeeded(8);
+      y = addWrapped(doc, `• ${item}`, margin + 2, y, pageWidth - margin * 2 - 2, 5.3);
+      y += 1;
+    });
+
     // Page 4: 90-day roadmap diagram + actions
     doc.addPage();
     y = margin;
@@ -526,7 +674,31 @@ app.post('/api/generate-report', async (req, res) => {
       y += 5;
     });
 
-    // Page 5: Answer-driven insight appendix
+    // Page 5: Execution Priority Matrix + First Week Plan
+    doc.addPage();
+    y = margin;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('Execution Priority Matrix', margin, y);
+    y += 7;
+    drawPriorityMatrix(doc, margin, y, pageWidth - margin * 2, 60, deep.matrixLabels);
+    y += 70;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text('First 7 Days Action Sprint', margin, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    deep.firstWeekPlan.forEach((step, idx) => {
+      nextPageIfNeeded(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`${idx + 1}.`, margin, y);
+      doc.setFont('helvetica', 'normal');
+      y = addWrapped(doc, step, margin + 8, y, pageWidth - margin * 2 - 8, 5.2);
+      y += 1.5;
+    });
+
+    // Page 6: Answer signal appendix
     doc.addPage();
     y = margin;
     doc.setFont('helvetica', 'bold');
@@ -535,22 +707,18 @@ app.post('/api/generate-report', async (req, res) => {
     y += 9;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    const sample = questionAnswers.slice(0, 8);
-    sample.forEach((qa, idx) => {
-      nextPageIfNeeded(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Q${qa.questionId}`, margin, y);
-      doc.setFont('helvetica', 'normal');
-      y = addWrapped(doc, qa.answer, margin + 14, y, pageWidth - margin * 2 - 14, 5);
-      y += 2;
-      if (idx < sample.length - 1) {
+    deep.sampleSignals.forEach((line, idx) => {
+      nextPageIfNeeded(12);
+      y = addWrapped(doc, `• ${line}`, margin + 2, y, pageWidth - margin * 2 - 2, 5.2);
+      y += 1.5;
+      if (idx < deep.sampleSignals.length - 1) {
         doc.setDrawColor(235, 235, 235);
         doc.line(margin, y, pageWidth - margin, y);
-        y += 5;
+        y += 4;
       }
     });
 
-    y += 8;
+    y += 10;
     nextPageIfNeeded(24);
     doc.setFillColor(15, 15, 15);
     doc.roundedRect(margin, y, pageWidth - margin * 2, 20, 3, 3, 'F');
