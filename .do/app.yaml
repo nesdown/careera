@@ -21,3 +21,8 @@ services:
       - key: GAMMA_API_KEY
         scope: RUN_TIME
         type: SECRET
+      - key: STRIPE_SECRET_KEY
+        scope: RUN_TIME
+        type: SECRET
+      - key: SITE_URL
+        value: "https://careera.cc"

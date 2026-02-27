@@ -14,6 +14,9 @@ export default function QuestionnaireWidget() {
   const [reportData, setReportData] = useState(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingStep, setLoadingStep] = useState(0);
+  const [email, setEmail] = useState('');
+  const [emailSubmitted, setEmailSubmitted] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   
   const variant = useMemo(() => getQuestionnaireVariant(), []);
   const questions = useMemo(() => getActiveQuestions(), []);
@@ -144,16 +147,25 @@ export default function QuestionnaireWidget() {
     }
   };
 
-  const handlePurchase = (option) => {
-    setSelectedOption(option);
-    console.log(`User selected: ${option}`);
-    
-    setTimeout(() => {
-      alert(`Purchase confirmed! ${option === 'report' ? 'Report' : 'Report + Career Boost Call'}`);
-      if (option === 'report') {
-        downloadPDF();
+  const handlePurchase = async (option) => {
+    setIsRedirecting(true);
+    try {
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers, variant, email, plan: option }),
+      });
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        console.error('No checkout URL returned', data);
+        setIsRedirecting(false);
       }
-    }, 500);
+    } catch (error) {
+      console.error('Checkout error:', error);
+      setIsRedirecting(false);
+    }
   };
 
   if (isComplete) {
@@ -214,8 +226,12 @@ export default function QuestionnaireWidget() {
                 ))}
               </ul>
 
-              <button className="w-full bg-white text-black px-4 py-3 rounded-lg font-semibold hover:bg-zinc-200 transition-colors">
-                Get Report - $9.99
+              <button
+                onClick={() => handlePurchase('report')}
+                disabled={isRedirecting}
+                className="w-full bg-white text-black px-4 py-3 rounded-lg font-semibold hover:bg-zinc-200 transition-colors disabled:opacity-60"
+              >
+                {isRedirecting ? 'Redirecting...' : 'Get Report — $9.99'}
               </button>
             </motion.div>
 
@@ -268,9 +284,11 @@ export default function QuestionnaireWidget() {
 
               <motion.button
                 whileHover={{ scale: 1.02 }}
-                className="w-full bg-white text-black px-4 py-3 rounded-lg font-semibold hover:bg-zinc-100 transition-colors shadow-lg"
+                onClick={() => handlePurchase('report-call')}
+                disabled={isRedirecting}
+                className="w-full bg-white text-black px-4 py-3 rounded-lg font-semibold hover:bg-zinc-100 transition-colors shadow-lg disabled:opacity-60"
               >
-                Get Report + Call - $29.99
+                {isRedirecting ? 'Redirecting...' : 'Get Report + Call — $29.99'}
               </motion.button>
             </motion.div>
           </div>
@@ -602,15 +620,40 @@ export default function QuestionnaireWidget() {
                   ],
                 }}
                 transition={{ duration: 2, repeat: Infinity }}
-                className="w-full flex items-center justify-center gap-2 bg-white text-black px-5 py-3 sm:py-3.5 rounded-full text-sm sm:text-base font-semibold hover:bg-zinc-100 transition-colors cursor-pointer"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span>Get Your Leadership Report</span>
-                <ArrowRight className="w-4 h-4" />
-              </motion.button>
-              
+                {!emailSubmitted ? (
+                <div className="space-y-3">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email to get the report"
+                    className="w-full bg-zinc-900 border border-zinc-700 text-white text-sm rounded-lg px-4 py-3 focus:border-zinc-500 focus:outline-none placeholder:text-zinc-500"
+                  />
+                  <motion.button
+                    onClick={() => { if (email && email.includes('@')) setEmailSubmitted(true); }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full flex items-center justify-center gap-2 bg-white text-black px-5 py-3 sm:py-3.5 rounded-full text-sm sm:text-base font-semibold hover:bg-zinc-100 transition-colors cursor-pointer disabled:opacity-50"
+                    disabled={!email || !email.includes('@')}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Get Your Leadership Report</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </motion.button>
+                </div>
+              ) : (
+                <motion.button
+                  onClick={() => setShowPricing(true)}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full flex items-center justify-center gap-2 bg-white text-black px-5 py-3 sm:py-3.5 rounded-full text-sm sm:text-base font-semibold hover:bg-zinc-100 transition-colors cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Choose Your Plan</span>
+                  <ArrowRight className="w-4 h-4" />
+                </motion.button>
+              )}
+
               <p className="mt-3 text-[10px] sm:text-xs text-center text-zinc-500">
-                Free intro call • No commitment required
+                No spam • No commitment required
               </p>
             </motion.div>
 
