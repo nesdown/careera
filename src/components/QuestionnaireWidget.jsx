@@ -609,18 +609,7 @@ export default function QuestionnaireWidget() {
                 ))}
               </div>
 
-              <motion.button
-                onClick={() => setShowPricing(true)}
-                whileTap={{ scale: 0.98 }}
-                animate={{
-                  boxShadow: [
-                    "0 10px 40px rgba(255,255,255,0.1)",
-                    "0 10px 60px rgba(255,255,255,0.2)",
-                    "0 10px 40px rgba(255,255,255,0.1)",
-                  ],
-                }}
-                transition={{ duration: 2, repeat: Infinity }}
-                {!emailSubmitted ? (
+              {!emailSubmitted ? (
                 <div className="space-y-3">
                   <input
                     type="email"
