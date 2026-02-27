@@ -7,7 +7,6 @@ export default function QuestionnaireWidget() {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState({});
   const [isComplete, setIsComplete] = useState(false);
-  const [showPricing, setShowPricing] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [reportReady, setReportReady] = useState(false);
@@ -15,7 +14,6 @@ export default function QuestionnaireWidget() {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingStep, setLoadingStep] = useState(0);
   const [email, setEmail] = useState('');
-  const [emailSubmitted, setEmailSubmitted] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   
   const variant = useMemo(() => getQuestionnaireVariant(), []);
@@ -169,143 +167,6 @@ export default function QuestionnaireWidget() {
   };
 
   if (isComplete) {
-    if (showPricing) {
-      return (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden w-full"
-        >
-          <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-zinc-800 bg-zinc-900">
-            <h3 className="text-lg sm:text-xl font-bold text-white mb-1">
-              Get Your Leadership Report
-            </h3>
-            <p className="text-xs sm:text-sm text-zinc-400">
-              Choose the option that fits your needs
-            </p>
-          </div>
-
-          <div className="p-4 sm:p-6 space-y-4">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handlePurchase('report')}
-              className="bg-zinc-900/50 border-2 border-zinc-700 hover:border-white/30 rounded-xl p-4 sm:p-6 cursor-pointer transition-all group"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Download className="w-5 h-5 text-white" />
-                    <h4 className="text-base sm:text-lg font-bold text-white">
-                      Leadership Report Only
-                    </h4>
-                  </div>
-                  <p className="text-xs sm:text-sm text-zinc-400 mb-3">
-                    Get your personalized 10-page leadership report PDF with AI analysis and data visualizations
-                  </p>
-                </div>
-                <div className="text-right ml-4">
-                  <div className="text-2xl sm:text-3xl font-bold text-white">$29</div>
-                </div>
-              </div>
-              
-              <ul className="space-y-2 mb-4">
-                {[
-                  "10-page detailed PDF report",
-                  "6 competency deep-dives with scores",
-                  "Leadership archetype identification",
-                  "90-day roadmap with weekly KPIs",
-                  "Data visualizations & charts",
-                  "Instant PDF download",
-                ].map((feature) => (
-                  <li key={feature} className="flex items-center gap-2 text-xs sm:text-sm text-zinc-300">
-                    <CheckCircle className="w-4 h-4 text-white shrink-0" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                onClick={() => handlePurchase('report')}
-                disabled={isRedirecting}
-                className="w-full bg-white text-black px-4 py-3 rounded-lg font-semibold hover:bg-zinc-200 transition-colors disabled:opacity-60"
-              >
-                {isRedirecting ? 'Redirecting...' : 'Get Report — $29'}
-              </button>
-            </motion.div>
-
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handlePurchase('report-call')}
-              className="relative bg-gradient-to-br from-white/10 to-zinc-900/50 border-2 border-white/40 rounded-xl p-4 sm:p-6 cursor-pointer transition-all overflow-hidden group"
-            >
-              <div className="absolute top-4 right-4 px-2 py-1 bg-white text-black rounded-full text-[10px] font-bold">
-                BEST VALUE
-              </div>
-
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="w-5 h-5 text-white" />
-                    <h4 className="text-base sm:text-lg font-bold text-white">
-                      Report + Career Boost Call
-                    </h4>
-                  </div>
-                  <p className="text-xs sm:text-sm text-zinc-300 mb-1">
-                    Everything in the report, plus 30-minute strategy call with a leadership coach
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-zinc-500 line-through">$134.99</span>
-                    <span className="text-xs text-white font-bold">Save $105!</span>
-                  </div>
-                </div>
-                <div className="text-right ml-4">
-                  <div className="text-2xl sm:text-3xl font-bold text-white">$97</div>
-                </div>
-              </div>
-              
-              <ul className="space-y-2 mb-4">
-                {[
-                  "Everything in the report",
-                  "30-minute 1-on-1 strategy call",
-                  "Personalized action plan review",
-                  "Answer your specific questions",
-                  "Career roadmap guidance",
-                  "Book your preferred time",
-                ].map((feature) => (
-                  <li key={feature} className="flex items-center gap-2 text-xs sm:text-sm text-zinc-200">
-                    <CheckCircle className="w-4 h-4 text-white shrink-0" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                onClick={() => handlePurchase('report-call')}
-                disabled={isRedirecting}
-                className="w-full bg-white text-black px-4 py-3 rounded-lg font-semibold hover:bg-zinc-100 transition-colors shadow-lg disabled:opacity-60"
-              >
-                {isRedirecting ? 'Redirecting...' : 'Get Report + Call — $97'}
-              </motion.button>
-            </motion.div>
-          </div>
-
-          <div className="px-4 sm:px-6 py-4 border-t border-zinc-800 bg-zinc-900">
-            <button
-              onClick={() => setShowPricing(false)}
-              className="text-xs sm:text-sm text-zinc-400 hover:text-white transition-colors flex items-center gap-1"
-            >
-              <ArrowLeft className="w-3 h-3" />
-              Back to Preview
-            </button>
-          </div>
-        </motion.div>
-      );
-    }
-
     return (
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -575,75 +436,153 @@ export default function QuestionnaireWidget() {
 
             <motion.div
               animate={{
-                borderColor: ["rgba(255,255,255,0.2)", "rgba(255,255,255,0.4)", "rgba(255,255,255,0.2)"],
+                borderColor: ['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.45)', 'rgba(255,255,255,0.2)'],
               }}
-              transition={{ duration: 3, repeat: Infinity }}
-              className="bg-gradient-to-br from-white/10 to-zinc-900/50 border-2 border-white/20 rounded-xl p-4 sm:p-6 mb-4 relative overflow-hidden"
+              transition={{ duration: 4, repeat: Infinity }}
+              className="bg-gradient-to-br from-white/10 to-zinc-900/50 border-2 border-white/20 rounded-2xl p-5 sm:p-6 mb-5 relative overflow-hidden"
             >
-              <div className="absolute top-3 right-3 px-2 py-1 bg-white text-black rounded-full text-[10px] font-bold">
-                LIMITED ACCESS
-              </div>
-              
-              <h4 className="text-base sm:text-lg font-bold text-white mb-2">
-                Download Your Full Report
-              </h4>
-              <p className="text-xs sm:text-sm text-zinc-400 mb-4">
-                Your complete 10-page PDF with competency charts, data visualizations, 
-                90-day roadmap, and personalized action plan is ready to download.
-              </p>
-              
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {[
-                  "10 detailed pages",
-                  "Charts & data visualizations",
-                  "Instant PDF download",
-                  "Professional document format",
-                ].map((feature) => (
-                  <div
-                    key={feature}
-                    className="flex items-center gap-1.5 text-[10px] sm:text-xs text-zinc-300"
-                  >
-                    <CheckCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white shrink-0" />
-                    {feature}
-                  </div>
-                ))}
+              <div className="absolute top-4 right-4 px-3 py-1 bg-white text-black rounded-full text-[10px] font-bold uppercase tracking-wide">
+                Unlock Access
               </div>
 
-              {!emailSubmitted ? (
-                <div className="space-y-3">
+              <div className="space-y-5 relative z-10">
+                <div className="grid gap-4 lg:grid-cols-3">
+                  <div className="lg:col-span-2">
+                    <p className="text-xs text-zinc-400 uppercase tracking-wide">Premium leadership dossier</p>
+                    <h4 className="text-xl sm:text-2xl font-bold text-white leading-tight">Unlock your full 13-page leadership operating system</h4>
+                    <p className="text-sm text-zinc-400 mt-2">Instant PDF + frameworks covering competencies, cadence, KPIs, risks, talent plan, and executive comms — personalized from your answers.</p>
+                  </div>
+                  {reportData?.analysis && (
+                    <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
+                      <div className="text-xs text-zinc-500 uppercase mb-2">Snapshot</div>
+                      <div className="flex items-center gap-3">
+                        <div className="w-14 h-14 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center">
+                          <span className="text-2xl font-bold text-white">{reportData.analysis.leadershipScore}</span>
+                        </div>
+                        <div>
+                          <div className="text-white text-sm font-semibold">{reportData.analysis.leadershipStage}</div>
+                          <div className="text-[10px] text-zinc-500">Leadership Score</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {[
+                    '6 competency deep-dives with evidence-based advice',
+                    'Operating cadence + KPI dashboard tailored to you',
+                    'Risk register, decision matrix, and stakeholder playbook',
+                    '90-day roadmap + first 7-day sprint to start immediately',
+                  ].map((item) => (
+                    <div key={item} className="flex items-start gap-2 text-xs sm:text-sm text-zinc-200">
+                      <CheckCircle className="w-3.5 h-3.5 text-green-400 mt-0.5 shrink-0" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="relative bg-zinc-900/70 border-2 border-white/30 rounded-2xl p-5 shadow-2xl shadow-white/10">
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <p className="text-xs text-zinc-400 uppercase tracking-wide">Leadership Report</p>
+                        <h5 className="text-lg font-bold text-white">Unlock the PDF</h5>
+                        <p className="text-xs text-zinc-400 mt-1">13-page dossier + lifetime access.</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-3xl font-bold text-white">$29</div>
+                        <div className="text-[10px] text-zinc-500 uppercase">one-time</div>
+                      </div>
+                    </div>
+
+                    <ul className="space-y-2 mb-4 text-sm text-zinc-200">
+                      {[
+                        'Full 13-page PDF + future updates',
+                        'Data visualizations + competency charts',
+                        'Operating cadence, KPIs, risk + decision matrix',
+                        'First-week sprint + 90-day roadmap',
+                      ].map((feature) => (
+                        <li key={feature} className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-400 mt-0.5" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+
+                    <button
+                      onClick={() => handlePurchase('report')}
+                      disabled={isRedirecting}
+                      className="w-full bg-white text-black rounded-full py-3 font-semibold text-sm sm:text-base hover:bg-zinc-100 transition-colors disabled:opacity-60"
+                    >
+                      {isRedirecting ? 'Redirecting…' : 'Unlock Report — $29'}
+                    </button>
+                    <p className="text-[10px] text-zinc-500 mt-3 text-center">Secure Stripe checkout · Instant download link</p>
+                  </div>
+
+                  <div className="relative bg-zinc-900/40 border border-white/20 rounded-2xl p-5">
+                    <div className="absolute top-4 right-4 px-3 py-1 bg-white text-black rounded-full text-[10px] font-bold">Popular</div>
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <p className="text-xs text-zinc-400 uppercase tracking-wide">Report + Call</p>
+                        <h5 className="text-lg font-bold text-white">Report + 30-min strategy session</h5>
+                        <p className="text-xs text-zinc-400 mt-1">Work the plan live with a leadership coach.</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-3xl font-bold text-white">$97</div>
+                        <div className="text-[10px] text-zinc-500 uppercase">save $105</div>
+                      </div>
+                    </div>
+
+                    <ul className="space-y-2 mb-4 text-sm text-zinc-200">
+                      {[
+                        'Everything in the Leadership Report',
+                        '30-min 1:1 call to review your plan',
+                        'Live Q&A + prioritization coaching',
+                        'Follow-up notes + suggested next steps',
+                      ].map((feature) => (
+                        <li key={feature} className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-white mt-0.5" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+
+                    <button
+                      onClick={() => handlePurchase('report-call')}
+                      disabled={isRedirecting}
+                      className="w-full bg-white text-black rounded-full py-3 font-semibold text-sm sm:text-base hover:bg-zinc-100 transition-colors disabled:opacity-60"
+                    >
+                      {isRedirecting ? 'Redirecting…' : 'Get Report + Call — $97'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
+                    <p className="text-sm font-semibold text-white mb-1">Trust Guarantee</p>
+                    <p className="text-xs text-zinc-400">If you feel the report isn’t worth at least 10× the price, reply to the receipt within 7 days for a full refund. No templates — every page is generated from your answers.</p>
+                  </div>
+                  <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
+                    <p className="text-sm font-semibold text-white mb-1">Leaders say</p>
+                    <p className="text-xs text-zinc-300 italic">“The report nailed my blind spots and gave me a concrete cadence to run. Took the plan straight into my next 1:1 and felt instantly more confident.”</p>
+                    <p className="text-[10px] text-zinc-500 mt-1">— Product Lead, Series B SaaS</p>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <label className="text-[11px] uppercase tracking-wide text-zinc-500">Optional — send receipt/report link to your email</label>
                   <input
-                    type="email"
+                    type='email'
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email to get the report"
-                    className="w-full bg-zinc-900 border border-zinc-700 text-white text-sm rounded-lg px-4 py-3 focus:border-zinc-500 focus:outline-none placeholder:text-zinc-500"
+                    placeholder='name@company.com'
+                    className="mt-2 w-full bg-zinc-900 border border-zinc-700 text-white text-sm rounded-lg px-4 py-3 focus:border-zinc-500 focus:outline-none placeholder:text-zinc-500"
                   />
-                  <motion.button
-                    onClick={() => { if (email && email.includes('@')) setEmailSubmitted(true); }}
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full flex items-center justify-center gap-2 bg-white text-black px-5 py-3 sm:py-3.5 rounded-full text-sm sm:text-base font-semibold hover:bg-zinc-100 transition-colors cursor-pointer disabled:opacity-50"
-                    disabled={!email || !email.includes('@')}
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    <span>Get Your Leadership Report</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </motion.button>
                 </div>
-              ) : (
-                <motion.button
-                  onClick={() => setShowPricing(true)}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full flex items-center justify-center gap-2 bg-white text-black px-5 py-3 sm:py-3.5 rounded-full text-sm sm:text-base font-semibold hover:bg-zinc-100 transition-colors cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Choose Your Plan</span>
-                  <ArrowRight className="w-4 h-4" />
-                </motion.button>
-              )}
 
-              <p className="mt-3 text-[10px] sm:text-xs text-center text-zinc-500">
-                No spam • No commitment required
-              </p>
+                <p className="text-[10px] text-center text-zinc-500">Encrypted Stripe checkout · Instant email receipt · VAT ready</p>
+              </div>
             </motion.div>
 
             <button
