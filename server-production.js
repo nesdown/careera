@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import OpenAI from 'openai';
+import Stripe from 'stripe';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
@@ -35,6 +36,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_placeholder');
+
+// Temporary in-memory store: stripeSessionId → { answers, variant, email }
+const pendingSessions = new Map();
 const GAMMA_API_KEY = process.env.GAMMA_API_KEY;
 const GAMMA_API_BASE = 'https://public-api.gamma.app/v1.0';
 
@@ -612,6 +618,131 @@ app.post('/api/generate-report', async (req, res) => {
       error: 'Failed to generate report',
       details: error.message,
     });
+  }
+});
+
+app.post('/api/create-checkout-session', async (req, res) => {
+  try {
+    const { answers, variant, email, plan } = req.body || {};
+
+    const SITE_URL = process.env.SITE_URL || 'https://careera.cc';
+
+    const lineItems = plan === 'report-call'
+      ? [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Leadership Report + Career Boost Call',
+              description: 'Personalized 10-page PDF leadership report + 30-min 1-on-1 strategy call with a leadership coach',
+            },
+            unit_amount: 2999,
+          },
+          quantity: 1,
+        }]
+      : [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Leadership Report',
+              description: 'Personalized 10-page PDF leadership report with AI analysis, competency scores, and 90-day roadmap',
+            },
+            unit_amount: 999,
+          },
+          quantity: 1,
+        }];
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'payment',
+      customer_email: email || undefined,
+      line_items: lineItems,
+      success_url: `${SITE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${SITE_URL}/?cancelled=1`,
+      metadata: { plan: plan || 'report' },
+    });
+
+    // Store answers keyed by Stripe session ID
+    pendingSessions.set(session.id, { answers, variant, email, plan });
+
+    res.json({ url: session.url });
+  } catch (error) {
+    console.error('Stripe checkout error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// After successful payment: verify session and generate report
+app.post('/api/generate-report-paid', async (req, res) => {
+  req.setTimeout(360000);
+  res.setTimeout(360000);
+
+  try {
+    const { session_id } = req.body || {};
+    if (!session_id) return res.status(400).json({ success: false, error: 'Missing session_id' });
+
+    // Verify payment with Stripe
+    const stripeSession = await stripe.checkout.sessions.retrieve(session_id);
+    if (stripeSession.payment_status !== 'paid') {
+      return res.status(402).json({ success: false, error: 'Payment not completed' });
+    }
+
+    // Get stored answers
+    const stored = pendingSessions.get(session_id);
+    if (!stored) return res.status(404).json({ success: false, error: 'Session data not found. Please contact support.' });
+
+    const { answers = {}, variant } = stored;
+
+    // Generate the report (same logic as /api/generate-report)
+    const questionAnswers = Object.entries(answers).map(([questionId, answer]) => ({
+      questionId,
+      answer: String(answer || ''),
+    }));
+    const seed = hashString(JSON.stringify(questionAnswers));
+
+    let aiRaw = null;
+    try { aiRaw = await generateAnalysis(questionAnswers); } catch (e) {
+      console.error('AI analysis failed, using fallback:', e.message);
+    }
+    const analysis = normalizeAnalysis(aiRaw, seed);
+
+    const themeId = await findTheme('Sales Presentation');
+    const inputText = buildGammaInputText(analysis);
+    const generation = await createGammaGeneration(inputText, themeId);
+    const result = await pollGammaGeneration(generation.generationId);
+
+    const exportUrl = result.exportUrl || result.export_url || result.fileUrl
+      || result.file_url || result.pdfUrl || result.pdf_url
+      || result.file?.url || result.downloadUrl || result.download_url || null;
+    const gammaUrl = result.gammaUrl || result.gamma_url || result.url || null;
+
+    let pdfBase64 = null;
+    if (exportUrl) {
+      try {
+        const pdfResponse = await axios.get(exportUrl, {
+          responseType: 'arraybuffer',
+          headers: { 'X-API-KEY': GAMMA_API_KEY },
+          timeout: 60000,
+        });
+        pdfBase64 = `data:application/pdf;base64,${Buffer.from(pdfResponse.data).toString('base64')}`;
+      } catch (e) {
+        console.error('PDF download failed:', e.message);
+      }
+    }
+
+    // Clean up session store
+    pendingSessions.delete(session_id);
+
+    res.json({
+      success: true,
+      pdf: pdfBase64,
+      gammaUrl,
+      filename: `Careera-Leadership-Report-${Date.now()}.pdf`,
+      analysis,
+      plan: stored.plan,
+    });
+  } catch (error) {
+    console.error('Error generating paid report:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate report', details: error.message });
   }
 });
 
