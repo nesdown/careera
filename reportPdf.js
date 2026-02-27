@@ -9,7 +9,7 @@ const C = {
   zinc200: '#e4e4e7', zinc100: '#f4f4f5', zinc50: '#fafafa',
 };
 
-const PAGE_W = 595.28, PAGE_H = 841.89, MARGIN = 48, INNER_W = 595.28 - 48 * 2, FOOTER_H = 32;
+const PAGE_W = 595.28, PAGE_H = 841.89, MARGIN = 48, INNER_W = 595.28 - 48 * 2, FOOTER_H = 32, TOTAL_PAGES = 13;
 
 function roundRect(doc, x, y, w, h, r, fill) {
   doc.save().roundedRect(x, y, w, h, r).fill(fill).restore();
@@ -127,7 +127,7 @@ export function generatePdfBuffer(analysis) {
     y = sectionTitle(doc, '90-Day Projected Outcome', y);
     y += 8;
     bodyText(doc, analysis.ninetyDayOutcome, MARGIN, y, { size: 10.5 });
-    pageFooter(doc, 2, 10);
+    pageFooter(doc, 2, TOTAL_PAGES);
 
     // PAGE 3: Competency Scores
     doc.addPage();
@@ -158,7 +158,7 @@ export function generatePdfBuffer(analysis) {
       doc.font('Helvetica').fontSize(9).fillColor(C.zinc700).text(t.l, tx + 12, y, { lineBreak: false });
       tx += 130;
     }
-    pageFooter(doc, 3, 10);
+    pageFooter(doc, 3, TOTAL_PAGES);
 
     // PAGES 4-5: Deep Dives
     for (let pass = 0; pass < 2; pass++) {
@@ -201,7 +201,7 @@ export function generatePdfBuffer(analysis) {
         }
       }
 
-      pageFooter(doc, 4 + pass, 10);
+      pageFooter(doc, 4 + pass, TOTAL_PAGES);
     }
 
     // PAGE 6: Blind Spots + Growth Areas
@@ -255,7 +255,7 @@ export function generatePdfBuffer(analysis) {
       }
       y += 8;
     }
-    pageFooter(doc, 6, 10);
+    pageFooter(doc, 6, TOTAL_PAGES);
 
     // PAGE 7: Stakeholder + KPIs
     doc.addPage();
@@ -290,9 +290,156 @@ export function generatePdfBuffer(analysis) {
       doc.font('Helvetica').fontSize(9).fillColor(C.zinc700).text(analysis.kpis[i], kX + 10, kY + 22, { width: kpiColW - 20 });
       if (isRight) kpiBaseY += 54;
     }
-    pageFooter(doc, 7, 10);
+    pageFooter(doc, 7, TOTAL_PAGES);
 
-    // PAGE 8: 90-Day Roadmap
+    // PAGE 8: Operating Cadence & Metrics
+    doc.addPage();
+    pageHeader(doc, 'Operating System');
+    y = 70;
+    y = sectionTitle(doc, 'Your Operating Cadence', y);
+    y += 8;
+
+    const cadenceSections = [
+      { title: 'Daily Operating Rituals', items: analysis.operatingCadence.daily, accent: C.green },
+      { title: 'Weekly Operating Rhythm', items: analysis.operatingCadence.weekly, accent: '#86efac' },
+      { title: 'Monthly Strategic Reviews', items: analysis.operatingCadence.monthly, accent: '#34d399' },
+    ];
+
+    cadenceSections.forEach((block) => {
+      y = ensureSpace(doc, y, 90);
+      roundRect(doc, MARGIN, y, INNER_W, 54, 10, C.zinc50);
+      doc.save().roundedRect(MARGIN, y, INNER_W, 54, 10).stroke(C.zinc200).lineWidth(0.5).stroke().restore();
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(block.accent).text(block.title, MARGIN + 18, y + 10);
+      const list = block.items || [];
+      doc.font('Helvetica').fontSize(9.5).fillColor(C.zinc700)
+        .text(list[0] || '', MARGIN + 18, y + 30, { width: INNER_W - 36 });
+      if (list[1]) doc.text(list[1], MARGIN + 18, doc.y + 4, { width: INNER_W - 36 });
+      if (list[2]) doc.text(list[2], MARGIN + 18, doc.y + 4, { width: INNER_W - 36 });
+      y = doc.y + 12;
+    });
+
+    y = divider(doc, y);
+    y = sectionTitle(doc, 'Leadership Metrics Dashboard', y);
+    y += 8;
+
+    const metricsPairs = [
+      { label: 'Leading Indicators', values: analysis.metricsDashboard.leadingIndicators, color: C.green },
+      { label: 'Lagging Indicators', values: analysis.metricsDashboard.laggingIndicators, color: '#fde047' },
+    ];
+
+    metricsPairs.forEach((set) => {
+      y = ensureSpace(doc, y, 80);
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(set.color).text(set.label.toUpperCase(), MARGIN, y);
+      y += 6;
+      set.values.forEach((metric) => {
+        y = ensureSpace(doc, y, 24);
+        roundRect(doc, MARGIN, y, INNER_W, 36, 6, C.zinc900);
+        roundRect(doc, MARGIN, y, 4, 36, 0, set.color);
+        doc.font('Helvetica').fontSize(9.5).fillColor(C.white).text(metric, MARGIN + 14, y + 10, { width: INNER_W - 28 });
+        y += 42;
+      });
+      y += 6;
+    });
+
+    pageFooter(doc, 8, TOTAL_PAGES);
+
+    // PAGE 9: Decision Matrix & Risks
+    doc.addPage();
+    pageHeader(doc, 'Strategic Decisions');
+    y = 70;
+    y = sectionTitle(doc, 'Decision Matrix', y);
+    y += 8;
+
+    const matrixCols = [
+      { title: 'Immediate Wins (next 14 days)', items: analysis.decisionMatrix.immediateWins, color: C.green },
+      { title: 'Strategic Bets (next 90 days)', items: analysis.decisionMatrix.strategicBets, color: '#fbbf24' },
+    ];
+
+    matrixCols.forEach((col, idx) => {
+      const colX = idx === 0 ? MARGIN : MARGIN + INNER_W / 2 + 12;
+      const colW = INNER_W / 2 - 12;
+      roundRect(doc, colX, y, colW, 40, 8, C.zinc900);
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(col.color).text(col.title, colX + 14, y + 12, { width: colW - 28 });
+      let innerY = y + 54;
+      col.items.forEach((item, itemIdx) => {
+        roundRect(doc, colX, innerY, colW, 32, 6, C.zinc50);
+        doc.font('Helvetica').fontSize(9).fillColor(C.zinc700).text(`${itemIdx + 1}. ${item}`, colX + 12, innerY + 9, { width: colW - 24 });
+        innerY += 38;
+      });
+    });
+
+    y += 54 + Math.max(matrixCols[0].items.length, matrixCols[1].items.length) * 38 + 6;
+    y = divider(doc, y);
+    y = sectionTitle(doc, 'Risk Register', y);
+    y += 8;
+
+    analysis.riskRegister.forEach((risk) => {
+      y = ensureSpace(doc, y, 70);
+      roundRect(doc, MARGIN, y, INNER_W, 60, 8, '#1c1917');
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#f87171').text(risk.risk, MARGIN + 16, y + 10, { width: INNER_W - 32 });
+      doc.font('Helvetica').fontSize(9).fillColor(C.zinc500).text(`Impact: ${risk.impact}  •  Owner: ${risk.owner}`, MARGIN + 16, y + 26);
+      doc.font('Helvetica').fontSize(9.5).fillColor(C.zinc200).text(risk.mitigation, MARGIN + 16, y + 38, { width: INNER_W - 32 });
+      y += 72;
+    });
+
+    pageFooter(doc, 9, TOTAL_PAGES);
+
+    // PAGE 10: Talent Plan & Meeting Blueprint
+    doc.addPage();
+    pageHeader(doc, 'People Systems');
+    y = 70;
+    y = sectionTitle(doc, 'Talent Acceleration Plan', y);
+    y += 8;
+
+    const talentBuckets = [
+      { label: 'Accelerate', items: analysis.talentPlan.accelerate, accent: C.green },
+      { label: 'Stabilize', items: analysis.talentPlan.stabilize, accent: '#fbbf24' },
+      { label: 'Delegate', items: analysis.talentPlan.delegate, accent: '#a855f7' },
+    ];
+
+    talentBuckets.forEach((bucket) => {
+      y = ensureSpace(doc, y, 90);
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(bucket.accent).text(bucket.label.toUpperCase(), MARGIN, y);
+      y += 6;
+      bucket.items.forEach((item) => {
+        roundRect(doc, MARGIN, y, INNER_W, 32, 6, C.zinc50);
+        doc.font('Helvetica').fontSize(9).fillColor(C.zinc700).text(item, MARGIN + 12, y + 9, { width: INNER_W - 24 });
+        y += 38;
+      });
+      y += 4;
+    });
+
+    y = divider(doc, y);
+    y = sectionTitle(doc, 'Meeting Blueprint', y);
+    y += 8;
+
+    const meetingBlocks = [
+      { title: 'Team Sync', data: analysis.meetingBlueprint.team, color: C.green },
+      { title: 'Leadership Update', data: analysis.meetingBlueprint.leadership, color: '#fbbf24' },
+      { title: 'Stakeholder Forum', data: analysis.meetingBlueprint.stakeholder, color: '#38bdf8' },
+    ];
+
+    meetingBlocks.forEach((meeting) => {
+      y = ensureSpace(doc, y, 110);
+      roundRect(doc, MARGIN, y, INNER_W, 90, 10, C.zinc900);
+      roundRect(doc, MARGIN, y, 6, 90, 10, meeting.color);
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(meeting.color).text(meeting.title, MARGIN + 14, y + 10);
+      doc.font('Helvetica').fontSize(9).fillColor(C.zinc500)
+        .text(`Purpose: ${meeting.data.purpose}`, MARGIN + 14, y + 28, { width: INNER_W - 28 });
+      doc.font('Helvetica').fontSize(9).fillColor(C.zinc500)
+        .text(`Cadence: ${meeting.data.cadence}`, MARGIN + 14, doc.y + 6, { width: INNER_W - 28 });
+      doc.font('Helvetica').fontSize(9).fillColor(C.zinc300)
+        .text('Agenda:', MARGIN + 14, doc.y + 8);
+      meeting.data.agenda.forEach((line) => {
+        doc.font('Helvetica').fontSize(9).fillColor(C.zinc100)
+          .text(`• ${line}`, MARGIN + 26, doc.y + 4, { width: INNER_W - 40 });
+      });
+      y = doc.y + 12;
+    });
+
+    pageFooter(doc, 10, TOTAL_PAGES);
+
+    // PAGE 11: 90-Day Roadmap
     doc.addPage();
     pageHeader(doc, '90-Day Roadmap');
     y = 70;
@@ -317,9 +464,9 @@ export function generatePdfBuffer(analysis) {
       }
       y += 14;
     }
-    pageFooter(doc, 8, 10);
+    pageFooter(doc, 11, TOTAL_PAGES);
 
-    // PAGE 9: First 7 Days
+    // PAGE 12: First 7 Days
     doc.addPage();
     pageHeader(doc, 'First 7 Days');
     y = 70;
@@ -340,9 +487,9 @@ export function generatePdfBuffer(analysis) {
       doc.font('Helvetica').fontSize(10).fillColor(C.zinc700).text(analysis.firstWeekPlan[i], MARGIN + 14, y + 24, { width: INNER_W - 28 });
       y += 62;
     }
-    pageFooter(doc, 9, 10);
+    pageFooter(doc, 12, TOTAL_PAGES);
 
-    // PAGE 10: Communication + CTA
+    // PAGE 13: Communication + CTA
     doc.addPage();
     pageHeader(doc, 'Communication & Next Steps');
     y = 70;
@@ -380,7 +527,7 @@ export function generatePdfBuffer(analysis) {
     doc.font('Helvetica-Bold').fontSize(13).fillColor(C.white).text('careera.cc', 0, fY + 20, { align: 'center', width: PAGE_W });
     doc.font('Helvetica').fontSize(10).fillColor(C.zinc500).text('Your leadership transformation starts today.', 0, fY + 40, { align: 'center', width: PAGE_W });
 
-    pageFooter(doc, 10, 10);
+    pageFooter(doc, 13, TOTAL_PAGES);
 
     doc.end();
   });

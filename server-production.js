@@ -80,11 +80,151 @@ function normalizeAnalysis(raw, seed) {
     return { name, score, level, deepDive: '' };
   });
 
+  const cleanList = (arr, fallback = []) => {
+    const list = Array.isArray(arr) ? arr.map((item) => sanitize(item, '')).filter(Boolean) : [];
+    return list.length ? list : fallback;
+  };
+
+  const fallbackOperatingCadence = {
+    daily: [
+      '15-min morning priority scan before opening Slack to pick the single leverage move',
+      'Daily 1:1 micro-touchpoint with one different report focused on unblockers, not status',
+      'End-of-day leadership journal: wins, blockers, delegation opportunities to push down',
+    ],
+    weekly: [
+      'Monday 30-min leadership stand-up: bets, risks, asks — camera on, docs ready',
+      'Wednesday delegation audit: confirm tasks stayed delegated, adjust support or scope',
+      'Friday stakeholder note summarizing impact, metrics, and next-week focus',
+    ],
+    monthly: [
+      'Week 1: Strategy calibration — tie team roadmap to company priorities with metrics',
+      'Week 2: Talent calibration — performance, succession, opportunities for each report',
+      'Final week: Operating review — what to automate, document, or sunset next month',
+    ],
+  };
+
+  const fallbackMetricsDashboard = {
+    leadingIndicators: [
+      'Delegation leverage: >40% of weekly tasks assigned vs. done personally',
+      '1:1 completion: 95% adherence with decision/action notes logged',
+      'Strategic calendar time: 2 hours/week protected for thinking and stakeholder planning',
+      'Stakeholder updates: 100% delivered on agreed cadence with clear CTAs',
+    ],
+    laggingIndicators: [
+      'Team velocity: +15% throughput without quality drop within 90 days',
+      'Attrition: <5% regretted exits over the next two quarters',
+      'Delivery predictability: 90% of commitments hit original scope and date',
+      'Exec satisfaction: >8/10 quarterly pulse from your leadership team',
+    ],
+  };
+
+  const fallbackDecisionMatrix = {
+    immediateWins: [
+      'Rebuild weekly 1:1 agenda around decisions, coaching, and unblockers',
+      'Publish delegation board so ownership is transparent to the whole team',
+      'Ship a concise executive update using context → decision → impact framing',
+      'Create a visible risk/issue log so escalations are proactive, not reactive',
+    ],
+    strategicBets: [
+      'Design a lightweight operating manual for your team — principles, cadences, metrics',
+      'Build cross-functional alliance with product/ops counterpart to unblock dependencies',
+      'Develop succession path for your role by mentoring a lieutenant on strategy and comms',
+      'Implement quarterly talent review to decide who accelerates, stabilizes, or exits',
+    ],
+  };
+
+  const fallbackRiskRegister = [
+    { risk: 'Delegation rollback because expectations were never codified', impact: 'High', mitigation: 'Write decision rights + success metrics for every delegated area and review weekly', owner: 'You' },
+    { risk: 'Stakeholders perceive team as tactical due to poor storytelling', impact: 'Medium', mitigation: 'Send monthly context → decision → impact updates with quantified outcomes', owner: 'You' },
+    { risk: 'Team burnout from hero-mode firefighting', impact: 'Medium', mitigation: 'Introduce guardrails: paging rota, escalation ladder, and post-incident retro within 48h', owner: 'Ops Partner' },
+  ];
+
+  const fallbackTalentPlan = {
+    accelerate: [
+      'Identify one direct report ready for stretch scope and co-own a strategic project',
+      'Give public recognition weekly to reinforce the behaviors you want scaled',
+      'Share decision context before delegating so emerging leaders learn how you think',
+    ],
+    stabilize: [
+      'Run monthly growth labs focusing on coaching, feedback, and conflict delivery',
+      'Pair mid-performers with mentors who excel where they struggle',
+      'Document expectations for each role using impact statements, not task lists',
+    ],
+    delegate: [
+      'Transition project status comms to a program lead with clear format and SLA',
+      'Hand off interview pipeline coordination to a trusted IC with playbook support',
+      'Assign sprint retrospective facilitation to a senior engineer to build facilitation muscle',
+    ],
+  };
+
+  const fallbackMeetingBlueprint = {
+    team: {
+      purpose: 'Align execution with strategy, unblock, and coach in public',
+      cadence: 'Weekly, 60 minutes',
+      agenda: ['Metrics pulse + anomalies', 'Decisions needed', 'Commitments + learns'],
+    },
+    leadership: {
+      purpose: 'Show how your team drives company priorities and surface risks early',
+      cadence: 'Bi-weekly, 30 minutes',
+      agenda: ['Narrative: context → decision → impact', 'Asks / escalations', 'Next bets'],
+    },
+    stakeholder: {
+      purpose: 'Maintain alignment with peers/customers impacted by your roadmap',
+      cadence: 'Monthly, 45 minutes',
+      agenda: ['Roadmap changes', 'Dependency check', 'Mutual commitments'],
+    },
+  };
+
   const competencies = Array.isArray(raw?.competencies) && raw.competencies.length >= 4
     ? raw.competencies.slice(0, 6).map((c, idx) => {
       const score = Number(c?.score);
       const safe = Number.isFinite(score) ? Math.max(55, Math.min(95, Math.round(score))) : fallbackCompetencies[idx].score;
-      return {
+      const operatingCadence = {
+    daily: cleanList(raw?.operatingCadence?.daily, fallbackOperatingCadence.daily),
+    weekly: cleanList(raw?.operatingCadence?.weekly, fallbackOperatingCadence.weekly),
+    monthly: cleanList(raw?.operatingCadence?.monthly, fallbackOperatingCadence.monthly),
+  };
+
+  const metricsDashboard = {
+    leadingIndicators: cleanList(raw?.metricsDashboard?.leadingIndicators, fallbackMetricsDashboard.leadingIndicators),
+    laggingIndicators: cleanList(raw?.metricsDashboard?.laggingIndicators, fallbackMetricsDashboard.laggingIndicators),
+  };
+
+  const decisionMatrix = {
+    immediateWins: cleanList(raw?.decisionMatrix?.immediateWins, fallbackDecisionMatrix.immediateWins),
+    strategicBets: cleanList(raw?.decisionMatrix?.strategicBets, fallbackDecisionMatrix.strategicBets),
+  };
+
+  const riskRegisterSource = Array.isArray(raw?.riskRegister) && raw.riskRegister.length ? raw.riskRegister : fallbackRiskRegister;
+  const riskRegister = riskRegisterSource.slice(0, 3).map((entry, idx) => {
+    const fallback = fallbackRiskRegister[idx] || fallbackRiskRegister[0];
+    return {
+      risk: sanitize(entry?.risk, fallback.risk),
+      impact: sanitize(entry?.impact, fallback.impact),
+      mitigation: sanitize(entry?.mitigation, fallback.mitigation),
+      owner: sanitize(entry?.owner, fallback.owner),
+    };
+  });
+
+  const talentPlan = {
+    accelerate: cleanList(raw?.talentPlan?.accelerate, fallbackTalentPlan.accelerate),
+    stabilize: cleanList(raw?.talentPlan?.stabilize, fallbackTalentPlan.stabilize),
+    delegate: cleanList(raw?.talentPlan?.delegate, fallbackTalentPlan.delegate),
+  };
+
+  const buildMeeting = (source = {}, fallback) => ({
+    purpose: sanitize(source?.purpose, fallback.purpose),
+    cadence: sanitize(source?.cadence, fallback.cadence),
+    agenda: cleanList(source?.agenda, fallback.agenda),
+  });
+
+  const meetingBlueprint = {
+    team: buildMeeting(raw?.meetingBlueprint?.team, fallbackMeetingBlueprint.team),
+    leadership: buildMeeting(raw?.meetingBlueprint?.leadership, fallbackMeetingBlueprint.leadership),
+    stakeholder: buildMeeting(raw?.meetingBlueprint?.stakeholder, fallbackMeetingBlueprint.stakeholder),
+  };
+
+  return {
         name: c?.name || fallbackCompetencies[idx].name,
         score: safe,
         level: c?.level || fallbackCompetencies[idx].level,
@@ -160,6 +300,12 @@ function normalizeAnalysis(raw, seed) {
           : ['Launch succession plans for key responsibilities', 'Promote ownership culture with role scorecards and weekly retros', 'Codify your team operating playbook for repeatability', 'Measure leadership impact through team autonomy metrics'],
       },
     },
+    operatingCadence,
+    metricsDashboard,
+    decisionMatrix,
+    riskRegister,
+    talentPlan,
+    meetingBlueprint,
     keyInsight: sanitize(
       raw?.keyInsight,
       'Your next level will come from leverage, not effort: scale your impact through systems, clarity, and people ownership.'
@@ -262,6 +408,34 @@ async function generateAnalysis(questionAnswers) {
     '    "month1":{"title":"...","theme":"short theme","actions":["5 concrete actions with deadlines"]},',
     '    "month2":{"title":"...","theme":"short theme","actions":["5 concrete actions with deadlines"]},',
     '    "month3":{"title":"...","theme":"short theme","actions":["5 concrete actions with deadlines"]}',
+    '  },',
+    '  "operatingCadence": {',
+    '    "daily":["3 habits tied to their answers"],',
+    '    "weekly":["3 operating rituals with owners"],',
+    '    "monthly":["3 strategic reviews or reflections"]',
+    '  },',
+    '  "metricsDashboard": {',
+    '    "leadingIndicators":["4 measurable signals with numeric targets"],',
+    '    "laggingIndicators":["4 outcome metrics with timeframes"]',
+    '  },',
+    '  "decisionMatrix": {',
+    '    "immediateWins":["4 quick wins deliverable in <14 days tied to user answers"],',
+    '    "strategicBets":["4 longer initiatives with measurable payoff"]',
+    '  },',
+    '  "riskRegister":[',
+    '    {"risk":"...","impact":"High|Medium|Low","mitigation":"specific plan","owner":"role"},',
+    '    {"risk":"...","impact":"...","mitigation":"...","owner":"..."},',
+    '    {"risk":"...","impact":"...","mitigation":"...","owner":"..."}',
+    '  ],',
+    '  "talentPlan": {',
+    '    "accelerate":["3 people or behaviors to fast-track"],',
+    '    "stabilize":["3 gaps that need coaching"],',
+    '    "delegate":["3 responsibilities to offload"]',
+    '  },',
+    '  "meetingBlueprint": {',
+    '    "team":{"purpose":"why this meeting exists","cadence":"e.g., weekly","agenda":["3 agenda lines"]},',
+    '    "leadership":{"purpose":"...","cadence":"...","agenda":["..."]},',
+    '    "stakeholder":{"purpose":"...","cadence":"...","agenda":["..."]}',
     '  },',
     '  "keyInsight":"1 powerful sentence that reframes how they should think about leadership",',
     '  "ninetyDayOutcome":"100-150 words describing specific, measurable outcomes if plan is executed",',

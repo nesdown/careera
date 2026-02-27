@@ -96,13 +96,13 @@ export default function Success() {
   };
 
   const loadingSteps = [
-    { label: "VERIFYING PAYMENT", detail: "Confirming your purchase..." },
-    { label: "ANALYZING LEADERSHIP PATTERNS", detail: "Scoring 6 competency dimensions..." },
-    { label: "BUILDING YOUR ARCHETYPE PROFILE", detail: "Matching behavioral patterns..." },
-    { label: "CRAFTING 90-DAY ROADMAP", detail: "Generating personalized action sequences..." },
-    { label: "DESIGNING REPORT LAYOUT", detail: "Building 10 premium pages..." },
-    { label: "FINALIZING YOUR REPORT", detail: "Applying final polish..." },
-    { label: "REPORT READY", detail: "Download available below." },
+    { label: 'PAYMENT VERIFIED', detail: 'Stripe confirmation + secure session keys issued.' },
+    { label: 'PROFILE RECONSTRUCTED', detail: 'Replaying your questionnaire answers into the engine.' },
+    { label: 'COMPETENCY LATTICE SCORED', detail: 'Six-dimension model + archetype + blind spots locked.' },
+    { label: 'OPERATING SYSTEM BUILT', detail: 'Operating cadence, metrics dashboard, and risks assembled.' },
+    { label: 'REPORT TYPESSET', detail: 'Designing the 13-page PDF dossier with Careera styling.' },
+    { label: 'ENCRYPTION & DELIVERY', detail: 'Packaging PDF + issuing download token.' },
+    { label: 'REPORT READY', detail: 'Download unlocked below.' },
   ];
 
   return (

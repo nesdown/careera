@@ -350,7 +350,7 @@ export default function QuestionnaireWidget() {
                   transition={{ delay: 0.2 }}
                   className="text-cyan-400"
                 >
-                  <span className="text-green-400">$</span> Initializing AI engines...
+                  <span className="text-green-400">$</span> Spinning up Careera report engine...
                   <motion.span
                     animate={{ opacity: [1, 0, 1] }}
                     transition={{ duration: 0.8, repeat: Infinity }}
@@ -363,19 +363,19 @@ export default function QuestionnaireWidget() {
                   transition={{ delay: 0.5 }}
                   className="text-zinc-400 text-[10px] sm:text-xs"
                 >
-                  → Loading GPT-4o + Gamma Design Engine... [████████████████] 100%
+                  → Routing data through leadership model + PDF renderer [████████████████] 100%
                 </motion.div>
 
                 <div className="space-y-3 mt-4">
                   {[
-                    { label: "ANALYZING LEADERSHIP PATTERNS", detail: "Parsing management style indicators...", step: 0 },
-                    { label: "SCORING 6 COMPETENCY DIMENSIONS", detail: "Calculating strategic thinking coefficients...", step: 1 },
-                    { label: "IDENTIFYING YOUR ARCHETYPE", detail: "Matching leadership behavior patterns...", step: 2 },
-                    { label: "BUILDING 90-DAY ROADMAP", detail: "Generating personalized action sequences...", step: 3 },
-                    { label: "DETECTING BLIND SPOTS", detail: "Cross-referencing behavioral signals...", step: 4 },
-                    { label: "DESIGNING REPORT PAGES", detail: "Creating 22+ visual pages with dark theme...", step: 5 },
-                    { label: "GENERATING AI ILLUSTRATIONS", detail: "Rendering professional visuals...", step: 6 },
-                    { label: "FINALIZING PREMIUM REPORT", detail: "Applying final polish and export...", step: 7 },
+                    { label: 'CAPTURING LEADERSHIP SIGNALS', detail: 'Structuring your survey answers for analysis.', step: 0 },
+                    { label: 'SCORING COMPETENCY LATTICE', detail: 'Running six-dimension model + leadership score.', step: 1 },
+                    { label: 'ARCHETYPE + BLIND SPOTS', detail: 'Mapping behavior patterns and evidence.', step: 2 },
+                    { label: 'OPERATING SYSTEM DRAFT', detail: 'Building cadence, KPIs, and stakeholder plan.', step: 3 },
+                    { label: 'RISK + DECISION MATRIX', detail: 'Prioritizing quick wins, strategic bets, and mitigations.', step: 4 },
+                    { label: 'TALENT + MEETING BLUEPRINT', detail: 'Designing how you coach, delegate, and communicate.', step: 5 },
+                    { label: '13-PAGE PDF TYPESSET', detail: 'Applying Careera layout + export settings.', step: 6 },
+                    { label: 'DELIVERY PIPELINE', detail: 'Encrypting and preparing your download link.', step: 7 },
                   ].map((item, idx) => (
                     <motion.div
                       key={idx}
@@ -443,7 +443,7 @@ export default function QuestionnaireWidget() {
                   transition={{ duration: 2, repeat: Infinity }}
                   className="mt-4 text-yellow-400/80 text-[10px] sm:text-xs"
                 >
-                  <span className="text-yellow-500">⚡</span> {loadingStep < 4 ? 'Optimizing neural pathways...' : 'Rendering premium visuals...'}
+                  <span className="text-yellow-500">⚡</span> {loadingStep < 4 ? 'Calibrating leadership model...' : 'Designing operating blueprint...'}
                 </motion.div>
 
                 {loadingProgress > 80 && (
