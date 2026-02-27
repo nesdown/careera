@@ -551,7 +551,7 @@ app.post('/api/create-checkout-session', async (req, res) => {
               name: 'Leadership Report + Career Boost Call',
               description: 'Personalized 10-page PDF leadership report + 30-min 1-on-1 strategy call with a leadership coach',
             },
-            unit_amount: 2999,
+            unit_amount: 9700,
           },
           quantity: 1,
         }]
@@ -562,7 +562,7 @@ app.post('/api/create-checkout-session', async (req, res) => {
               name: 'Leadership Report',
               description: 'Personalized 10-page PDF leadership report with AI analysis, competency scores, and 90-day roadmap',
             },
-            unit_amount: 999,
+            unit_amount: 2900,
           },
           quantity: 1,
         }];

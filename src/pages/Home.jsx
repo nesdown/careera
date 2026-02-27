@@ -714,11 +714,11 @@ export default function Home() {
                 className="text-4xl sm:text-5xl lg:text-7xl font-bold leading-[1.1] mb-4 sm:mb-6"
               >
                 <span className="bg-gradient-to-r from-white via-white to-zinc-400 bg-clip-text text-transparent">
-                  From Manager to
+                  You were promoted.
                 </span>
                 <br />
                 <span className="text-white">
-                  Respected Leader
+                  No one taught you how.
                 </span>
               </motion.h1>
 
@@ -726,7 +726,7 @@ export default function Home() {
                 variants={childFade}
                 className="text-base sm:text-lg lg:text-xl text-zinc-400 max-w-xl mx-auto lg:mx-0 leading-relaxed mb-6 sm:mb-8 px-2 sm:px-0"
               >
-                Get promoted—but never taught to lead? We'll create your <span className="text-white font-semibold">career boost plan</span>, build your leadership skills, and guide you to <span className="text-white font-semibold">better management</span>.
+                Take the 5-minute diagnostic. Get a <span className="text-white font-semibold">personalized leadership report</span> that shows exactly what's holding you back — and a clear plan to fix it.
               </motion.p>
 
               <motion.div

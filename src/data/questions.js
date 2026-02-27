@@ -306,23 +306,10 @@ export const questionsB = [
 
 // Function to randomly select a questionnaire variant (50/50 split)
 export function getQuestionnaireVariant() {
-  // Check if variant is already stored in session
-  const storedVariant = sessionStorage.getItem('questionnaireVariant');
-  
-  if (storedVariant) {
-    return storedVariant;
-  }
-  
-  // Random 50/50 split
-  const variant = Math.random() < 0.5 ? 'A' : 'B';
-  sessionStorage.setItem('questionnaireVariant', variant);
-  
-  // Also track in localStorage for analytics
-  const variantCount = JSON.parse(localStorage.getItem('variantStats') || '{"A": 0, "B": 0}');
-  variantCount[variant]++;
-  localStorage.setItem('variantStats', JSON.stringify(variantCount));
-  
-  return variant;
+  // Variant A is the deep diagnostic — default for all users
+  // Keeping session storage for analytics continuity
+  sessionStorage.setItem('questionnaireVariant', 'A');
+  return 'A';
 }
 
 // Get the active questions based on variant

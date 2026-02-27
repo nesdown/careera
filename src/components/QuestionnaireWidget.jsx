@@ -206,7 +206,7 @@ export default function QuestionnaireWidget() {
                   </p>
                 </div>
                 <div className="text-right ml-4">
-                  <div className="text-2xl sm:text-3xl font-bold text-white">$9.99</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-white">$29</div>
                 </div>
               </div>
               
@@ -231,7 +231,7 @@ export default function QuestionnaireWidget() {
                 disabled={isRedirecting}
                 className="w-full bg-white text-black px-4 py-3 rounded-lg font-semibold hover:bg-zinc-200 transition-colors disabled:opacity-60"
               >
-                {isRedirecting ? 'Redirecting...' : 'Get Report — $9.99'}
+                {isRedirecting ? 'Redirecting...' : 'Get Report — $29'}
               </button>
             </motion.div>
 
@@ -262,7 +262,7 @@ export default function QuestionnaireWidget() {
                   </div>
                 </div>
                 <div className="text-right ml-4">
-                  <div className="text-2xl sm:text-3xl font-bold text-white">$29.99</div>
+                  <div className="text-2xl sm:text-3xl font-bold text-white">$97</div>
                 </div>
               </div>
               
@@ -288,7 +288,7 @@ export default function QuestionnaireWidget() {
                 disabled={isRedirecting}
                 className="w-full bg-white text-black px-4 py-3 rounded-lg font-semibold hover:bg-zinc-100 transition-colors shadow-lg disabled:opacity-60"
               >
-                {isRedirecting ? 'Redirecting...' : 'Get Report + Call — $29.99'}
+                {isRedirecting ? 'Redirecting...' : 'Get Report + Call — $97'}
               </motion.button>
             </motion.div>
           </div>
