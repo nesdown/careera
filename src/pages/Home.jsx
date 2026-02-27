@@ -1303,8 +1303,19 @@ export default function Home() {
                 Transforming careers, one roadmap at a time.
               </p>
             </div>
-            <div className="text-xs sm:text-sm text-zinc-500">
-              &copy; 2026 Careera. All rights reserved.
+            <div className="flex flex-col items-center md:items-end gap-2">
+              <div className="flex items-center gap-4 text-xs sm:text-sm">
+                <Link to="/privacy" className="text-zinc-500 hover:text-white transition-colors">
+                  Privacy Policy
+                </Link>
+                <span className="text-zinc-700">|</span>
+                <Link to="/terms" className="text-zinc-500 hover:text-white transition-colors">
+                  Terms of Use
+                </Link>
+              </div>
+              <div className="text-xs sm:text-sm text-zinc-500">
+                &copy; 2026 Careera. All rights reserved.
+              </div>
             </div>
           </div>
         </div>
