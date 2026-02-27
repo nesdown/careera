@@ -42,6 +42,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_placeholder');
 
 // Temporary in-memory store: stripeSessionId → { answers, variant, email }
 const pendingSessions = new Map();
+const TEST_EMAILS = new Set(['testemail@email.com']);
+
 
 function parseAiJson(content) {
   if (!content) return null;
@@ -594,6 +596,14 @@ app.post('/api/create-checkout-session', async (req, res) => {
           quantity: 1,
         }];
 
+    // Test email bypass — skip Stripe entirely
+    if (email && TEST_EMAILS.has(email.toLowerCase().trim())) {
+      const testSessionId = `test_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const SITE_URL = process.env.SITE_URL || 'https://careera.cc';
+      pendingSessions.set(testSessionId, { answers, variant, email, plan, isTest: true });
+      return res.json({ url: `${SITE_URL}/success?session_id=${testSessionId}` });
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
@@ -622,9 +632,13 @@ app.post('/api/generate-report-paid', async (req, res) => {
     const { session_id } = req.body || {};
     if (!session_id) return res.status(400).json({ success: false, error: 'Missing session_id' });
 
-    const stripeSession = await stripe.checkout.sessions.retrieve(session_id);
-    if (stripeSession.payment_status !== 'paid') {
-      return res.status(402).json({ success: false, error: 'Payment not completed' });
+    // Test email bypass
+    const storedCheck = pendingSessions.get(session_id);
+    if (!storedCheck?.isTest) {
+      const stripeSession = await stripe.checkout.sessions.retrieve(session_id);
+      if (stripeSession.payment_status !== 'paid') {
+        return res.status(402).json({ success: false, error: 'Payment not completed' });
+      }
     }
 
     const stored = pendingSessions.get(session_id);
