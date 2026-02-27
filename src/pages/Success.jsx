@@ -26,52 +26,46 @@ export default function Success() {
 
   const generatePaidReport = async () => {
     setStatus("generating");
+    setLoadingProgress(0);
+    setLoadingStep(0);
 
-    // Start fake progress animation while we wait
-    const steps = [
-      { progress: 15, duration: 3000, step: 0 },
-      { progress: 30, duration: 3500, step: 1 },
-      { progress: 45, duration: 4000, step: 2 },
-      { progress: 60, duration: 4000, step: 3 },
-      { progress: 72, duration: 5000, step: 4 },
-      { progress: 84, duration: 5000, step: 5 },
-      { progress: 93, duration: 6000, step: 6 },
-      { progress: 98, duration: 8000, step: 7 },
-    ];
+    // Smooth progress animation tied to real expected duration (~25s)
+    let cancelled = false;
+    const TOTAL_MS = 28000;
+    const startTime = Date.now();
 
-    const apiPromise = fetch("/api/generate-report-paid", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: sessionId }),
-    });
+    const animateProgress = () => {
+      if (cancelled) return;
+      const elapsed = Date.now() - startTime;
+      const t = Math.min(elapsed / TOTAL_MS, 1);
+      // Ease-out: fast start, slow near end (cap at 92% until real done)
+      const eased = 1 - Math.pow(1 - t, 2);
+      const progress = Math.min(eased * 92, 92);
+      setLoadingProgress(progress);
 
-    for (const stepData of steps) {
-      const duration = stepData.duration;
-      const startTime = Date.now();
-      await new Promise((resolve) => {
-        const animate = () => {
-          const elapsed = Date.now() - startTime;
-          const t = Math.min(elapsed / duration, 1);
-          setLoadingProgress((prev) => {
-            const target = stepData.progress;
-            return prev + (target - prev) * t;
-          });
-          if (t < 1) {
-            requestAnimationFrame(animate);
-          } else {
-            setLoadingStep(stepData.step + 1);
-            resolve();
-          }
-        };
-        animate();
-      });
-    }
+      // Advance loading step label based on progress
+      if (progress < 15) setLoadingStep(0);
+      else if (progress < 35) setLoadingStep(1);
+      else if (progress < 55) setLoadingStep(2);
+      else if (progress < 70) setLoadingStep(3);
+      else if (progress < 82) setLoadingStep(4);
+      else setLoadingStep(5);
+
+      if (t < 1) requestAnimationFrame(animateProgress);
+    };
+    requestAnimationFrame(animateProgress);
 
     try {
-      const response = await apiPromise;
+      const response = await fetch("/api/generate-report-paid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
       const data = await response.json();
 
+      cancelled = true;
       setLoadingProgress(100);
+      setLoadingStep(6);
 
       if (data.success) {
         setReportData(data);
@@ -81,6 +75,7 @@ export default function Success() {
         setError(data.error || "Report generation failed. Please contact support.");
       }
     } catch (err) {
+      cancelled = true;
       setStatus("error");
       setError("Something went wrong. Please contact support@careera.cc");
     }
@@ -102,13 +97,12 @@ export default function Success() {
 
   const loadingSteps = [
     { label: "VERIFYING PAYMENT", detail: "Confirming your purchase..." },
-    { label: "ANALYZING LEADERSHIP PATTERNS", detail: "Parsing management style indicators..." },
-    { label: "SCORING 6 COMPETENCY DIMENSIONS", detail: "Calculating strategic thinking coefficients..." },
-    { label: "IDENTIFYING YOUR ARCHETYPE", detail: "Matching leadership behavior patterns..." },
-    { label: "BUILDING 90-DAY ROADMAP", detail: "Generating personalized action sequences..." },
-    { label: "DESIGNING REPORT PAGES", detail: "Creating 10 visual pages..." },
-    { label: "GENERATING CHARTS & VISUALIZATIONS", detail: "Rendering professional data visualizations..." },
-    { label: "FINALIZING PREMIUM REPORT", detail: "Applying final polish and export..." },
+    { label: "ANALYZING LEADERSHIP PATTERNS", detail: "Scoring 6 competency dimensions..." },
+    { label: "BUILDING YOUR ARCHETYPE PROFILE", detail: "Matching behavioral patterns..." },
+    { label: "CRAFTING 90-DAY ROADMAP", detail: "Generating personalized action sequences..." },
+    { label: "DESIGNING REPORT LAYOUT", detail: "Building 10 premium pages..." },
+    { label: "FINALIZING YOUR REPORT", detail: "Applying final polish..." },
+    { label: "REPORT READY", detail: "Download available below." },
   ];
 
   return (
@@ -127,7 +121,7 @@ export default function Success() {
                   <div className="w-3 h-3 rounded-full bg-green-500" />
                 </div>
                 <span className="text-green-400 text-sm font-mono ml-2">
-                  careera@terminal:~$ ./build-leadership-report.sh
+                  careera@engine:~$ ./generate-report --premium
                 </span>
               </div>
               <div className="p-6 font-mono text-sm space-y-4 min-h-[420px]">
@@ -180,7 +174,7 @@ export default function Success() {
                     ))}]
                   </div>
                 </div>
-                <div className="text-zinc-500 text-xs mt-2">This usually takes 1–2 minutes. Do not close this page.</div>
+                <div className="text-zinc-500 text-xs mt-2">Usually takes 20–30 seconds. Do not close this page.</div>
               </div>
             </div>
           )}
