@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState, useMemo } from "react";
 
 // Dense 3-layer star field (far/mid/near)
@@ -53,7 +53,7 @@ export function OrbitingElements() {
     <div className="fixed inset-0 pointer-events-none overflow-hidden">
       {/* Large slow orbit — upper area */}
       <motion.div
-        className="absolute top-[15%] left-[20%] w-[520px] h-[520px] opacity-15"
+        className="absolute top-[15%] left-[20%] w-[520px] h-[520px] opacity-[0.15]"
         animate={{ rotate: 360 }}
         transition={{ duration: 70, repeat: Infinity, ease: "linear" }}
       >
@@ -74,7 +74,7 @@ export function OrbitingElements() {
 
       {/* Medium counter-orbit — lower right */}
       <motion.div
-        className="absolute bottom-[20%] right-[15%] w-80 h-80 opacity-12"
+        className="absolute bottom-[20%] right-[15%] w-80 h-80 opacity-[0.12]"
         animate={{ rotate: -360 }}
         transition={{ duration: 45, repeat: Infinity, ease: "linear" }}
       >
@@ -173,6 +173,8 @@ export function ShootingStars() {
 
 // Gradient nebula orbs — richer, deeper
 export function GradientOrbs() {
+  const reducedMotion = useReducedMotion();
+
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden">
       {/* Top-right large nebula */}
@@ -182,7 +184,7 @@ export function GradientOrbs() {
           background:
             "radial-gradient(circle, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.015) 40%, transparent 68%)",
         }}
-        animate={{ scale: [1, 1.12, 1], opacity: [0.7, 1, 0.7] }}
+        animate={reducedMotion ? {} : { scale: [1, 1.12, 1], opacity: [0.7, 1, 0.7] }}
         transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
       />
 
@@ -193,7 +195,7 @@ export function GradientOrbs() {
           background:
             "radial-gradient(circle, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.01) 40%, transparent 68%)",
         }}
-        animate={{ scale: [1, 1.18, 1], opacity: [0.6, 1, 0.6] }}
+        animate={reducedMotion ? {} : { scale: [1, 1.18, 1], opacity: [0.6, 1, 0.6] }}
         transition={{ duration: 14, repeat: Infinity, delay: 2.5, ease: "easeInOut" }}
       />
 
@@ -204,18 +206,18 @@ export function GradientOrbs() {
           background:
             "radial-gradient(circle, rgba(255,255,255,0.018) 0%, transparent 55%)",
         }}
-        animate={{ scale: [1, 1.06, 1], opacity: [0.5, 0.9, 0.5] }}
+        animate={reducedMotion ? {} : { scale: [1, 1.06, 1], opacity: [0.5, 0.9, 0.5] }}
         transition={{ duration: 18, repeat: Infinity, delay: 5, ease: "easeInOut" }}
       />
 
-      {/* Mid-page accent nebula */}
+      {/* Mid-page accent nebula — hidden on mobile to reduce GPU load */}
       <motion.div
-        className="absolute top-[40%] left-[10%] w-[400px] h-[400px] rounded-full"
+        className="absolute top-[40%] left-[10%] w-[400px] h-[400px] rounded-full hidden sm:block"
         style={{
           background:
             "radial-gradient(circle, rgba(255,255,255,0.02) 0%, transparent 60%)",
         }}
-        animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.7, 0.3] }}
+        animate={reducedMotion ? {} : { scale: [1, 1.3, 1], opacity: [0.3, 0.7, 0.3] }}
         transition={{ duration: 20, repeat: Infinity, delay: 7, ease: "easeInOut" }}
       />
     </div>

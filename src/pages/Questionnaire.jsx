@@ -494,7 +494,7 @@ export default function Questionnaire() {
       >
         <button
           onClick={() => navigate("/")}
-          className="flex items-center gap-1.5 text-zinc-600 hover:text-zinc-300 transition-colors text-xs group"
+          className="flex items-center gap-1.5 text-zinc-600 hover:text-zinc-300 transition-colors text-xs group -m-2 p-2 min-h-[44px]"
         >
           <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
           <span className="font-mono tracking-widest uppercase">Abort</span>
@@ -541,7 +541,7 @@ export default function Questionnaire() {
         className="relative z-10 px-4 sm:px-6 pb-4 sm:pb-6"
       >
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-center gap-1 sm:gap-1.5">
+          <div className="flex items-center gap-1 sm:gap-1.5 overflow-hidden max-w-full">
             {questions.map((_, i) => (
               <motion.div
                 key={i}
@@ -659,7 +659,7 @@ export default function Questionnaire() {
             <button
               onClick={handleBack}
               disabled={currentQ === 0}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 px-4 py-3 rounded-lg border text-sm font-medium transition-all min-h-[44px] ${
                 currentQ === 0
                   ? "opacity-20 cursor-not-allowed border-zinc-800 text-zinc-500"
                   : "border-zinc-800 text-zinc-400 hover:border-zinc-600 hover:text-white cursor-pointer"
@@ -688,7 +688,7 @@ export default function Questionnaire() {
                     : {}
                 }
                 transition={{ duration: 2.4, repeat: Infinity }}
-                className={`flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-2.5 sm:py-3 rounded-full font-semibold text-sm sm:text-base transition-all ${
+                className={`flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3.5 rounded-full font-semibold text-sm sm:text-base transition-all min-h-[44px] ${
                   canProceed
                     ? "bg-white text-black hover:bg-zinc-100 cursor-pointer"
                     : "bg-white/15 text-white/30 cursor-not-allowed"

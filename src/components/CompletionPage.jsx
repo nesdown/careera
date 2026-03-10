@@ -224,7 +224,7 @@ function MissionControlConsole({ onComplete, answers }) {
                 careera@mission-control:~$ ./build-leadership-report.sh
               </span>
             </div>
-            <div className="h-[320px] overflow-y-auto p-5 sm:p-6 space-y-1 scrollbar-none">
+            <div className="h-[min(320px,40vh)] overflow-y-auto p-5 sm:p-6 space-y-1 scrollbar-none">
               {STEPS.map((s, idx) => {
                 const isVisible = visibleSteps.includes(idx);
                 const status = !isVisible
@@ -322,7 +322,7 @@ function ReportReady({ analysis }) {
           }}
         />
         {/* Radial glow */}
-        <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
+        <div className="fixed inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
           <motion.div
             initial={{ scale: 0.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -389,7 +389,7 @@ function ReportReady({ analysis }) {
               <div className="space-y-2.5">
                 {analysis.competencies.map((c) => (
                   <div key={c.name} className="flex items-center gap-3">
-                    <span className="text-[10px] text-zinc-500 w-36 shrink-0 truncate">{c.name}</span>
+                    <span className="text-[10px] text-zinc-500 w-28 sm:w-36 shrink-0 truncate">{c.name}</span>
                     <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
@@ -409,7 +409,7 @@ function ReportReady({ analysis }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.35 }}
-              className="grid grid-cols-2 gap-2 mb-8"
+              className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-2 mb-8"
             >
               {[
                 "Executive summary",

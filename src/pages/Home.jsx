@@ -273,13 +273,9 @@ function OldWayCard() {
           <div className="pt-3 border-t border-zinc-800">
             <div className="text-zinc-600 text-xs mb-1">Path forward</div>
             <div className="text-3xl font-bold text-zinc-500">Unclear</div>
-            <motion.p
-              animate={{ opacity: isHovered ? 1 : 0 }}
-              transition={{ duration: 0.3 }}
-              className="text-xs text-zinc-600 mt-2"
-            >
+            <p className="text-xs text-zinc-600 mt-2">
               Most never become true leaders
-            </motion.p>
+            </p>
           </div>
         </div>
       </div>
@@ -427,12 +423,9 @@ function NewWayCard() {
                 Fast-track
               </motion.div>
             </div>
-            <motion.p
-              animate={{ opacity: isHovered ? 1 : 0 }}
-              className="text-[10px] sm:text-xs text-zinc-400 mt-1.5 sm:mt-2"
-            >
+            <p className="text-[10px] sm:text-xs text-zinc-400 mt-1.5 sm:mt-2">
               Become a respected leader, fast
-            </motion.p>
+            </p>
           </div>
         </div>
       </div>
@@ -447,9 +440,10 @@ function TimelineItem({ week, title, description, isActive }) {
   return (
     <motion.div
       variants={childFade}
-      className="flex gap-4 group relative"
+      className="flex gap-4 group relative cursor-pointer"
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
+      onClick={() => setIsHovered(v => !v)}
     >
       {/* Hover glow effect */}
       <motion.div
@@ -584,6 +578,19 @@ export default function Home() {
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
   const scale = useTransform(scrollYProgress, [0, 0.5], [1, 0.95]);
 
+  const weeklyCount = useMemo(() => Math.floor(Math.random() * 21) + 10, []);
+  const particles = useMemo(
+    () =>
+      Array.from({ length: 15 }, (_, i) => ({
+        id: i,
+        left: Math.random() * 100,
+        top: Math.random() * 100,
+        duration: 3 + Math.random() * 2,
+        delay: Math.random() * 2,
+      })),
+    []
+  );
+
   const successStories = [
     {
       quote: "Building a startup while learning to lead was overwhelming. The structured approach helped me transition from doing everything myself to building and leading a team.",
@@ -638,23 +645,13 @@ export default function Home() {
           className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-gradient-to-tr from-white to-transparent blur-3xl"
         />
         {/* Floating particles */}
-        {[...Array(15)].map((_, i) => (
+        {particles.map((p) => (
           <motion.div
-            key={i}
+            key={p.id}
             className="absolute w-1 h-1 bg-white rounded-full"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
-            animate={{
-              y: [0, -30, 0],
-              opacity: [0, 0.5, 0],
-            }}
-            transition={{
-              duration: 3 + Math.random() * 2,
-              repeat: Infinity,
-              delay: Math.random() * 2,
-            }}
+            style={{ left: `${p.left}%`, top: `${p.top}%` }}
+            animate={{ y: [0, -30, 0], opacity: [0, 0.5, 0] }}
+            transition={{ duration: p.duration, repeat: Infinity, delay: p.delay }}
           />
         ))}
       </div>
@@ -776,7 +773,7 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
             {[
               { value: 100, label: "Leaders in Program", suffix: "+" },
-              { value: Math.floor(Math.random() * 21) + 10, label: "Started This Week", suffix: "" },
+              { value: weeklyCount, label: "Started This Week", suffix: "" },
               { value: 87, label: "Satisfaction Rate", suffix: "%" },
               { value: 45, label: "Avg. Salary Increase", suffix: "K" },
             ].map((stat, i) => (
@@ -1145,15 +1142,15 @@ export default function Home() {
                 key={item.title}
                 variants={childFade}
                 whileHover={{ x: 8 }}
-                className="flex items-start gap-6 bg-gradient-to-br from-zinc-800/50 to-zinc-900/30 border border-zinc-700/50 rounded-2xl p-8 hover:border-zinc-600 transition-all group relative overflow-hidden"
+                className="flex items-start gap-3 sm:gap-5 lg:gap-6 bg-gradient-to-br from-zinc-800/50 to-zinc-900/30 border border-zinc-700/50 rounded-2xl p-4 sm:p-6 lg:p-8 hover:border-zinc-600 transition-all group relative overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <motion.div
                   whileHover={{ scale: 1.05, rotate: 5 }}
                   transition={{ type: "spring", stiffness: 300 }}
-                  className="flex-shrink-0 flex items-center justify-center w-16 h-16 bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600 rounded-2xl shadow-lg relative z-10"
+                  className="flex-shrink-0 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-zinc-700 to-zinc-800 border border-zinc-600 rounded-xl sm:rounded-2xl shadow-lg relative z-10"
                 >
-                  <item.icon className="w-8 h-8 text-white" />
+                  <item.icon className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-white" />
                 </motion.div>
                 <div className="relative z-10 flex-1">
                   <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
@@ -1285,7 +1282,7 @@ export default function Home() {
                   />
                 ))}
               </div>
-              <span>{Math.floor(Math.random() * 21) + 10} started this week</span>
+              <span>{weeklyCount} started this week</span>
             </div>
           </motion.div>
         </motion.div>
