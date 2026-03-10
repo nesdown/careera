@@ -80,151 +80,11 @@ function normalizeAnalysis(raw, seed) {
     return { name, score, level, deepDive: '' };
   });
 
-  const cleanList = (arr, fallback = []) => {
-    const list = Array.isArray(arr) ? arr.map((item) => sanitize(item, '')).filter(Boolean) : [];
-    return list.length ? list : fallback;
-  };
-
-  const fallbackOperatingCadence = {
-    daily: [
-      '15-min morning priority scan before opening Slack to pick the single leverage move',
-      'Daily 1:1 micro-touchpoint with one different report focused on unblockers, not status',
-      'End-of-day leadership journal: wins, blockers, delegation opportunities to push down',
-    ],
-    weekly: [
-      'Monday 30-min leadership stand-up: bets, risks, asks — camera on, docs ready',
-      'Wednesday delegation audit: confirm tasks stayed delegated, adjust support or scope',
-      'Friday stakeholder note summarizing impact, metrics, and next-week focus',
-    ],
-    monthly: [
-      'Week 1: Strategy calibration — tie team roadmap to company priorities with metrics',
-      'Week 2: Talent calibration — performance, succession, opportunities for each report',
-      'Final week: Operating review — what to automate, document, or sunset next month',
-    ],
-  };
-
-  const fallbackMetricsDashboard = {
-    leadingIndicators: [
-      'Delegation leverage: >40% of weekly tasks assigned vs. done personally',
-      '1:1 completion: 95% adherence with decision/action notes logged',
-      'Strategic calendar time: 2 hours/week protected for thinking and stakeholder planning',
-      'Stakeholder updates: 100% delivered on agreed cadence with clear CTAs',
-    ],
-    laggingIndicators: [
-      'Team velocity: +15% throughput without quality drop within 90 days',
-      'Attrition: <5% regretted exits over the next two quarters',
-      'Delivery predictability: 90% of commitments hit original scope and date',
-      'Exec satisfaction: >8/10 quarterly pulse from your leadership team',
-    ],
-  };
-
-  const fallbackDecisionMatrix = {
-    immediateWins: [
-      'Rebuild weekly 1:1 agenda around decisions, coaching, and unblockers',
-      'Publish delegation board so ownership is transparent to the whole team',
-      'Ship a concise executive update using context → decision → impact framing',
-      'Create a visible risk/issue log so escalations are proactive, not reactive',
-    ],
-    strategicBets: [
-      'Design a lightweight operating manual for your team — principles, cadences, metrics',
-      'Build cross-functional alliance with product/ops counterpart to unblock dependencies',
-      'Develop succession path for your role by mentoring a lieutenant on strategy and comms',
-      'Implement quarterly talent review to decide who accelerates, stabilizes, or exits',
-    ],
-  };
-
-  const fallbackRiskRegister = [
-    { risk: 'Delegation rollback because expectations were never codified', impact: 'High', mitigation: 'Write decision rights + success metrics for every delegated area and review weekly', owner: 'You' },
-    { risk: 'Stakeholders perceive team as tactical due to poor storytelling', impact: 'Medium', mitigation: 'Send monthly context → decision → impact updates with quantified outcomes', owner: 'You' },
-    { risk: 'Team burnout from hero-mode firefighting', impact: 'Medium', mitigation: 'Introduce guardrails: paging rota, escalation ladder, and post-incident retro within 48h', owner: 'Ops Partner' },
-  ];
-
-  const fallbackTalentPlan = {
-    accelerate: [
-      'Identify one direct report ready for stretch scope and co-own a strategic project',
-      'Give public recognition weekly to reinforce the behaviors you want scaled',
-      'Share decision context before delegating so emerging leaders learn how you think',
-    ],
-    stabilize: [
-      'Run monthly growth labs focusing on coaching, feedback, and conflict delivery',
-      'Pair mid-performers with mentors who excel where they struggle',
-      'Document expectations for each role using impact statements, not task lists',
-    ],
-    delegate: [
-      'Transition project status comms to a program lead with clear format and SLA',
-      'Hand off interview pipeline coordination to a trusted IC with playbook support',
-      'Assign sprint retrospective facilitation to a senior engineer to build facilitation muscle',
-    ],
-  };
-
-  const fallbackMeetingBlueprint = {
-    team: {
-      purpose: 'Align execution with strategy, unblock, and coach in public',
-      cadence: 'Weekly, 60 minutes',
-      agenda: ['Metrics pulse + anomalies', 'Decisions needed', 'Commitments + learns'],
-    },
-    leadership: {
-      purpose: 'Show how your team drives company priorities and surface risks early',
-      cadence: 'Bi-weekly, 30 minutes',
-      agenda: ['Narrative: context → decision → impact', 'Asks / escalations', 'Next bets'],
-    },
-    stakeholder: {
-      purpose: 'Maintain alignment with peers/customers impacted by your roadmap',
-      cadence: 'Monthly, 45 minutes',
-      agenda: ['Roadmap changes', 'Dependency check', 'Mutual commitments'],
-    },
-  };
-
   const competencies = Array.isArray(raw?.competencies) && raw.competencies.length >= 4
     ? raw.competencies.slice(0, 6).map((c, idx) => {
       const score = Number(c?.score);
       const safe = Number.isFinite(score) ? Math.max(55, Math.min(95, Math.round(score))) : fallbackCompetencies[idx].score;
-      const operatingCadence = {
-    daily: cleanList(raw?.operatingCadence?.daily, fallbackOperatingCadence.daily),
-    weekly: cleanList(raw?.operatingCadence?.weekly, fallbackOperatingCadence.weekly),
-    monthly: cleanList(raw?.operatingCadence?.monthly, fallbackOperatingCadence.monthly),
-  };
-
-  const metricsDashboard = {
-    leadingIndicators: cleanList(raw?.metricsDashboard?.leadingIndicators, fallbackMetricsDashboard.leadingIndicators),
-    laggingIndicators: cleanList(raw?.metricsDashboard?.laggingIndicators, fallbackMetricsDashboard.laggingIndicators),
-  };
-
-  const decisionMatrix = {
-    immediateWins: cleanList(raw?.decisionMatrix?.immediateWins, fallbackDecisionMatrix.immediateWins),
-    strategicBets: cleanList(raw?.decisionMatrix?.strategicBets, fallbackDecisionMatrix.strategicBets),
-  };
-
-  const riskRegisterSource = Array.isArray(raw?.riskRegister) && raw.riskRegister.length ? raw.riskRegister : fallbackRiskRegister;
-  const riskRegister = riskRegisterSource.slice(0, 3).map((entry, idx) => {
-    const fallback = fallbackRiskRegister[idx] || fallbackRiskRegister[0];
-    return {
-      risk: sanitize(entry?.risk, fallback.risk),
-      impact: sanitize(entry?.impact, fallback.impact),
-      mitigation: sanitize(entry?.mitigation, fallback.mitigation),
-      owner: sanitize(entry?.owner, fallback.owner),
-    };
-  });
-
-  const talentPlan = {
-    accelerate: cleanList(raw?.talentPlan?.accelerate, fallbackTalentPlan.accelerate),
-    stabilize: cleanList(raw?.talentPlan?.stabilize, fallbackTalentPlan.stabilize),
-    delegate: cleanList(raw?.talentPlan?.delegate, fallbackTalentPlan.delegate),
-  };
-
-  const buildMeeting = (source = {}, fallback) => ({
-    purpose: sanitize(source?.purpose, fallback.purpose),
-    cadence: sanitize(source?.cadence, fallback.cadence),
-    agenda: cleanList(source?.agenda, fallback.agenda),
-  });
-
-  const meetingBlueprint = {
-    team: buildMeeting(raw?.meetingBlueprint?.team, fallbackMeetingBlueprint.team),
-    leadership: buildMeeting(raw?.meetingBlueprint?.leadership, fallbackMeetingBlueprint.leadership),
-    stakeholder: buildMeeting(raw?.meetingBlueprint?.stakeholder, fallbackMeetingBlueprint.stakeholder),
-  };
-
-  return {
+      return {
         name: c?.name || fallbackCompetencies[idx].name,
         score: safe,
         level: c?.level || fallbackCompetencies[idx].level,
@@ -300,12 +160,6 @@ function normalizeAnalysis(raw, seed) {
           : ['Launch succession plans for key responsibilities', 'Promote ownership culture with role scorecards and weekly retros', 'Codify your team operating playbook for repeatability', 'Measure leadership impact through team autonomy metrics'],
       },
     },
-    operatingCadence,
-    metricsDashboard,
-    decisionMatrix,
-    riskRegister,
-    talentPlan,
-    meetingBlueprint,
     keyInsight: sanitize(
       raw?.keyInsight,
       'Your next level will come from leverage, not effort: scale your impact through systems, clarity, and people ownership.'
@@ -710,11 +564,11 @@ async function pollGammaGeneration(generationId, maxWaitMs = 300000) {
   throw new Error('Gamma generation timed out after 5 minutes');
 }
 
-app.post('/api/generate-report', async (req, res) => {
+async function handleGenerateReportRequest(req, res, answersInput = {}) {
   req.setTimeout(120000);
   res.setTimeout(120000);
   try {
-    const { answers = {}, variant } = req.body || {};
+    const answers = answersInput && typeof answersInput === 'object' ? answersInput : {};
     const questionAnswers = Object.entries(answers).map(([questionId, answer]) => ({
       questionId, answer: String(answer || ''),
     }));
@@ -738,15 +592,33 @@ app.post('/api/generate-report', async (req, res) => {
       console.warn('Server PDF generation failed (non-fatal):', pdfErr.message);
     }
 
-    res.json({
+    return res.json({
       success: true,
       ...(pdfBase64 ? { pdf: pdfBase64, filename: `Careera-Leadership-Report-${Date.now()}.pdf` } : {}),
       analysis,
     });
   } catch (error) {
     console.error('Error generating report:', error);
-    res.status(500).json({ success: false, error: 'Failed to generate report', details: error.message });
+    return res.status(500).json({ success: false, error: 'Failed to generate report', details: error.message });
   }
+}
+
+app.post('/api/generate-report', async (req, res) => {
+  return handleGenerateReportRequest(req, res, req.body?.answers || {});
+});
+
+// Some production proxies or manual browser checks hit GET; keep this endpoint
+// functional instead of returning "Cannot GET /api/generate-report".
+app.get('/api/generate-report', async (req, res) => {
+  let answers = {};
+  if (typeof req.query?.answers === 'string' && req.query.answers.trim()) {
+    try {
+      answers = JSON.parse(req.query.answers);
+    } catch {
+      answers = {};
+    }
+  }
+  return handleGenerateReportRequest(req, res, answers);
 });
 
 app.post('/api/create-checkout-session', async (req, res) => {
