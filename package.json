@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:api": "node server.js",
+    "dev:api": "PORT=3001 node server.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

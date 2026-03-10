@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
 
-export default function Navbar({ showProgress, progress, questionLabel }) {
+export default function Navbar({ showProgress, progress, questionLabel, onLaunch }) {
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black via-black to-zinc-950 border-b border-zinc-800 shadow-lg">
@@ -15,6 +15,14 @@ export default function Navbar({ showProgress, progress, questionLabel }) {
             <span className="text-xs sm:text-sm text-zinc-400 truncate max-w-[180px] sm:max-w-none">
               {questionLabel}
             </span>
+          ) : onLaunch ? (
+            <button
+              onClick={onLaunch}
+              className="bg-white text-black px-5 sm:px-6 py-2.5 sm:py-3 rounded-full text-xs sm:text-sm font-semibold hover:bg-zinc-200 transition-all shadow-md hover:shadow-lg cursor-pointer"
+            >
+              <span className="hidden sm:inline">Start Your Journey</span>
+              <span className="sm:hidden">Start</span>
+            </button>
           ) : (
             <Link
               to="/Questionnaire"
