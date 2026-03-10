@@ -67,9 +67,9 @@ function PageHeader({ number, title }) {
     </div>
   );
 }
-function Page({ children, breakBefore = false }) {
+function Page({ children, breakBefore = false, className = "" }) {
   return (
-    <div className="px-8 sm:px-14 py-10 bg-[#0a0a0a] rpt-page"
+    <div className={`px-8 sm:px-14 py-10 bg-[#0a0a0a] rpt-page ${className}`}
       style={breakBefore ? { pageBreakBefore: "always", breakBefore: "page" } : {}}>
       {children}
     </div>
@@ -219,10 +219,24 @@ export default function LeadershipReport({ analysis }) {
           .no-print { display:none !important; }
           .rpt-page { padding: 8mm 10mm !important; }
           .rpt-no-break { break-inside:avoid !important; page-break-inside:avoid !important; }
-          .rpt-page p, .rpt-page li { font-size:0.67rem !important; line-height:1.45 !important; }
-          .rpt-page h2 { font-size:1.4rem !important; }
-          .rpt-page h4 { font-size:0.8rem !important; }
+          .rpt-page p, .rpt-page li { font-size:0.64rem !important; line-height:1.38 !important; }
+          .rpt-page h2 { font-size:1.28rem !important; }
+          .rpt-page h4 { font-size:0.76rem !important; }
           .rpt-card { padding:12px !important; }
+          .rpt-page:last-child { page-break-after:auto !important; break-after:auto !important; }
+          .rpt-page-4 p, .rpt-page-4 li,
+          .rpt-page-7 p, .rpt-page-7 li,
+          .rpt-page-10 p, .rpt-page-10 li {
+            font-size:0.61rem !important;
+            line-height:1.34 !important;
+          }
+          .rpt-page-4 .rpt-card,
+          .rpt-page-7 .rpt-card,
+          .rpt-page-10 .rpt-card {
+            padding:10px !important;
+          }
+          .rpt-tight-grid { gap:0.6rem !important; }
+          .rpt-tight-mb { margin-bottom:0.75rem !important; }
         }
       `}</style>
 
@@ -296,7 +310,7 @@ export default function LeadershipReport({ analysis }) {
         </div>
 
         {/* ═══ PAGE 2 — EXECUTIVE SUMMARY ════════════════════════════════════ */}
-        <Page breakBefore>
+        <Page breakBefore className="rpt-page-4">
           <PageHeader number={2} title="Executive Summary" />
 
           <div className="grid grid-cols-3 gap-5 mb-5">
@@ -538,7 +552,7 @@ export default function LeadershipReport({ analysis }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-5">
+          <div className="grid grid-cols-3 gap-4 mb-5 rpt-tight-grid rpt-tight-mb">
             <SectionCard className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Zap className="w-4 h-4 text-zinc-300" />
@@ -579,7 +593,7 @@ export default function LeadershipReport({ analysis }) {
             </SectionCard>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-5">
+          <div className="grid grid-cols-2 gap-4 mb-5 rpt-tight-grid rpt-tight-mb">
             <SectionCard className="p-5">
               <Label>How You Lead Under Pressure</Label>
               <p className="text-xs text-zinc-500 leading-relaxed mb-3">
@@ -632,7 +646,7 @@ export default function LeadershipReport({ analysis }) {
         </Page>
 
         {/* ═══ PAGE 5 — GROWTH GAPS ══════════════════════════════════════════ */}
-        <Page breakBefore>
+        <Page breakBefore className="rpt-page-7">
           <PageHeader number={5} title="Your Top 3 Growth Gaps" />
           <p className="text-sm text-zinc-500 mb-5 leading-relaxed">
             These three areas represent the highest-return investments of your development time. Each gap is rated High Priority because it sits at the intersection of current weakness and future leadership requirements. Addressing all three within 90 days will produce a measurable shift in your leadership effectiveness and visibility.
@@ -763,7 +777,7 @@ export default function LeadershipReport({ analysis }) {
           <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
             One focused action per day. Sequenced to build compound momentum — do not reorder. Each action takes 30–60 minutes. By Day 7 you will have established operating habits that compound over the 90-day plan.
           </p>
-          <div className="grid grid-cols-4 gap-3 mb-6">
+          <div className="grid grid-cols-4 gap-3 mb-6 rpt-tight-grid rpt-tight-mb">
             {analysis.firstWeekPlan.map((action, i) => (
               <div key={i} className="bg-zinc-900/40 border border-zinc-800 rounded-xl p-4 flex flex-col gap-2 rpt-no-break">
                 <div className="flex items-center gap-2">
@@ -776,7 +790,7 @@ export default function LeadershipReport({ analysis }) {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-5 mb-5">
+          <div className="grid grid-cols-2 gap-5 mb-5 rpt-tight-grid rpt-tight-mb">
             <SectionCard className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <Users className="w-4 h-4 text-zinc-500" />
@@ -806,7 +820,7 @@ export default function LeadershipReport({ analysis }) {
           </div>
 
           <SubHeader>Accountability Framework</SubHeader>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3 rpt-tight-grid">
             {[
               { period:"Weekly",   action:"Review 3 KPIs and log 1 lesson learned in a private leadership journal.", anchor:"Every Monday morning, 20 min" },
               { period:"Monthly",  action:"Score yourself 1–10 on each competency and compare to your previous month.", anchor:"First day of each new month" },
@@ -822,7 +836,7 @@ export default function LeadershipReport({ analysis }) {
         </Page>
 
         {/* ═══ PAGE 8 — BENCHMARK ════════════════════════════════════════════ */}
-        <Page breakBefore>
+        <Page breakBefore className="rpt-page-10">
           <PageHeader number={8} title="Benchmark Comparison" />
           <p className="text-sm text-zinc-500 mb-5 leading-relaxed">
             How your scores compare to a peer cohort of managers at a similar stage. Peer averages reflect assessment data across the same leadership tier. Use this data to understand where you have a competitive advantage and where targeted development would move you into the top quartile.
