@@ -57,13 +57,18 @@ function SubHeader({ children }) {
 function Label({ children }) {
   return <div className="text-[9px] font-mono tracking-[0.28em] text-zinc-600 uppercase mb-2">{children}</div>;
 }
-function PageHeader({ number, title }) {
+function PageHeader({ number, title, subtitle }) {
   return (
-    <div className="flex items-center gap-3 mb-7">
-      <span className="text-[9px] font-mono text-zinc-700 w-6">{String(number).padStart(2, "0")}</span>
-      <div className="h-px flex-1 bg-zinc-800" />
-      <span className="text-[9px] font-mono tracking-[0.3em] text-zinc-600 uppercase">{title}</span>
-      <div className="h-px w-8 bg-zinc-800" />
+    <div className="mb-6">
+      <div className="flex items-center gap-3 mb-1.5">
+        <span className="text-[9px] font-mono text-zinc-700 w-6">{String(number).padStart(2, "0")}</span>
+        <div className="h-px flex-1 bg-zinc-800" />
+        <span className="text-[9px] font-mono tracking-[0.3em] text-zinc-600 uppercase">{title}</span>
+        <div className="h-px w-8 bg-zinc-800" />
+      </div>
+      {subtitle && (
+        <p className="text-[10px] text-zinc-600 leading-relaxed mt-1 pl-9">{subtitle}</p>
+      )}
     </div>
   );
 }
@@ -202,6 +207,148 @@ function EvolutionStaircase({ currentStep }) {
   );
 }
 
+// ─── Additional SVG & visual helpers ──────────────────────────────────────────
+function ProgressRing({ score, size = 64 }) {
+  const r = size * 0.36, cx = size / 2, cy = size / 2;
+  const circ = 2 * Math.PI * r;
+  const filled = circ * (score / 100);
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={size * 0.1} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="white" strokeWidth={size * 0.1}
+        strokeDasharray={`${filled} ${circ - filled}`} strokeLinecap="round"
+        transform={`rotate(-90 ${cx} ${cy})`} opacity={0.8} />
+      <text x={cx} y={cy + size * 0.08} textAnchor="middle" fill="white"
+        fontSize={size * 0.26} fontWeight="700" fontFamily="monospace">{score}</text>
+    </svg>
+  );
+}
+
+function QuadrantChart({ topLeft = [], topRight = [], bottomLeft = [], bottomRight = [], width = 340, height = 230 }) {
+  const pad = { t: 28, r: 12, b: 20, l: 32 };
+  const W = width - pad.l - pad.r, H = height - pad.t - pad.b;
+  const quadrants = [
+    { items: topLeft,     x: 0,       y: 0,       fill: "rgba(255,255,255,0.04)",  label: "DO NOW",     lx: W * 0.25, ly: 14 },
+    { items: topRight,    x: W / 2,   y: 0,       fill: "rgba(255,255,255,0.015)", label: "PLAN",       lx: W * 0.75, ly: 14 },
+    { items: bottomLeft,  x: 0,       y: H / 2,   fill: "rgba(255,255,255,0.008)", label: "DELEGATE",   lx: W * 0.25, ly: H / 2 + 14 },
+    { items: bottomRight, x: W / 2,   y: H / 2,   fill: "rgba(255,255,255,0.012)", label: "DEPRIORITISE", lx: W * 0.75, ly: H / 2 + 14 },
+  ];
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+      {/* Quadrant fills */}
+      {quadrants.map((q, i) => (
+        <rect key={i} x={pad.l + q.x} y={pad.t + q.y} width={W / 2} height={H / 2}
+          fill={q.fill} stroke="rgba(255,255,255,0.06)" strokeWidth={0.5} />
+      ))}
+      {/* Dividers */}
+      <line x1={pad.l} y1={pad.t + H / 2} x2={pad.l + W} y2={pad.t + H / 2} stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
+      <line x1={pad.l + W / 2} y1={pad.t} x2={pad.l + W / 2} y2={pad.t + H} stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
+      {/* Quadrant labels */}
+      {quadrants.map((q, i) => (
+        <text key={i} x={pad.l + q.lx} y={pad.t + q.ly} textAnchor="middle"
+          fill="rgba(255,255,255,0.22)" fontSize={6.5} fontFamily="monospace" letterSpacing="0.08em">{q.label}</text>
+      ))}
+      {/* Axis labels */}
+      <text x={pad.l + W / 2} y={height - 2} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize={7} fontFamily="monospace">EFFORT →</text>
+      <text x={10} y={pad.t + H / 2} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize={7} fontFamily="monospace"
+        transform={`rotate(-90 10 ${pad.t + H / 2})`}>IMPACT →</text>
+      {/* Dots per quadrant */}
+      {quadrants.map((q, qi) =>
+        q.items.map((label, ii) => {
+          const cols = 2, row = Math.floor(ii / cols), col = ii % cols;
+          const dx = (col + 0.5) / cols, dy = (row + 0.8) / Math.max(q.items.length / cols, 1.5);
+          const cx = pad.l + q.x + dx * (W / 2);
+          const cy = pad.t + q.y + 22 + dy * (H / 2 - 26);
+          const isKey = qi === 0;
+          return (
+            <g key={`${qi}-${ii}`}>
+              <circle cx={cx} cy={cy} r={3.5} fill={isKey ? "white" : "rgba(255,255,255,0.45)"} />
+              <text x={cx + 6} y={cy + 2.5} fill={isKey ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.45)"}
+                fontSize={6.5} fontFamily="sans-serif">{label.length > 28 ? label.slice(0, 28) + "…" : label}</text>
+            </g>
+          );
+        })
+      )}
+    </svg>
+  );
+}
+
+function StakeholderMapSvg({ width = 300, height = 210 }) {
+  const pad = 36;
+  const W = width - pad * 2, H = height - pad * 2;
+  const zones = [
+    { label: "PARTNER", sub: "Manage closely", x: 0.72, y: 0.22, key: true },
+    { label: "INFORM",  sub: "Keep updated",   x: 0.25, y: 0.25, key: false },
+    { label: "MONITOR", sub: "Watch & engage", x: 0.73, y: 0.75, key: false },
+    { label: "MAINTAIN", sub: "Satisfy",       x: 0.25, y: 0.75, key: false },
+  ];
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+      <rect x={pad} y={pad} width={W / 2} height={H / 2} fill="rgba(255,255,255,0.04)" />
+      <rect x={pad + W / 2} y={pad} width={W / 2} height={H / 2} fill="rgba(255,255,255,0.06)" />
+      <rect x={pad} y={pad + H / 2} width={W / 2} height={H / 2} fill="rgba(255,255,255,0.015)" />
+      <rect x={pad + W / 2} y={pad + H / 2} width={W / 2} height={H / 2} fill="rgba(255,255,255,0.025)" />
+      <line x1={pad} y1={pad + H / 2} x2={pad + W} y2={pad + H / 2} stroke="rgba(255,255,255,0.15)" strokeWidth={0.75} />
+      <line x1={pad + W / 2} y1={pad} x2={pad + W / 2} y2={pad + H} stroke="rgba(255,255,255,0.15)" strokeWidth={0.75} />
+      {/* Corner axis labels */}
+      <text x={pad - 2} y={pad - 6} fill="rgba(255,255,255,0.2)" fontSize={6} fontFamily="monospace">HIGH ALIGN.</text>
+      <text x={pad - 2} y={pad + H + 14} fill="rgba(255,255,255,0.2)" fontSize={6} fontFamily="monospace">LOW ALIGN.</text>
+      <text x={pad + W / 2} y={height - 3} textAnchor="middle" fill="rgba(255,255,255,0.25)" fontSize={7} fontFamily="monospace">INFLUENCE →</text>
+      {zones.map((z, i) => {
+        const cx = pad + z.x * W, cy = pad + (1 - z.y) * H;
+        return (
+          <g key={i}>
+            {z.key && <circle cx={cx} cy={cy} r={14} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth={0.75} strokeDasharray="3 2" />}
+            <circle cx={cx} cy={cy} r={z.key ? 7 : 5} fill={z.key ? "white" : "rgba(255,255,255,0.35)"} />
+            <text x={cx} y={cy - 11} textAnchor="middle" fill={z.key ? "white" : "rgba(255,255,255,0.5)"}
+              fontSize={7.5} fontWeight={z.key ? "700" : "400"} fontFamily="sans-serif">{z.label}</text>
+            <text x={cx} y={cy - 3} textAnchor="middle" fill="rgba(255,255,255,0.25)" fontSize={6} fontFamily="monospace">{z.sub}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function KpiBar({ label, target = "", index = 0 }) {
+  const fill = 45 + ((index * 13) % 45);
+  return (
+    <div className="rpt-no-break space-y-1">
+      <div className="flex justify-between items-baseline">
+        <span className="text-[10px] text-zinc-400 leading-snug">{label}</span>
+        {target && <span className="text-[9px] font-mono text-zinc-600 shrink-0 ml-2">{target}</span>}
+      </div>
+      <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+        <div className="h-full rounded-full bg-gradient-to-r from-zinc-600 to-zinc-300" style={{ width: `${fill}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function RiskBadge({ impact }) {
+  const map = { High: "bg-zinc-300 text-zinc-900", Medium: "bg-zinc-600 text-zinc-200", Low: "bg-zinc-800 text-zinc-500" };
+  return (
+    <span className={`text-[8px] font-mono px-1.5 py-0.5 rounded uppercase tracking-widest ${map[impact] || map.Low}`}>{impact}</span>
+  );
+}
+
+function CadenceColumn({ title, items = [], icon }) {
+  return (
+    <SectionCard className="p-4 flex flex-col gap-2.5">
+      <div className="flex items-center gap-2 mb-1">
+        {icon}
+        <span className="text-[9px] font-mono tracking-[0.25em] text-zinc-500 uppercase">{title}</span>
+      </div>
+      {items.map((item, i) => (
+        <div key={i} className="flex items-start gap-2 rpt-no-break">
+          <span className="text-zinc-700 font-mono text-[9px] shrink-0 mt-0.5">{String(i + 1).padStart(2, "0")}</span>
+          <span className="text-[10px] text-zinc-500 leading-relaxed">{item}</span>
+        </div>
+      ))}
+    </SectionCard>
+  );
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 export default function LeadershipReport({ analysis }) {
   const sorted  = [...analysis.competencies].sort((a,b) => b.score - a.score);
@@ -224,15 +371,18 @@ export default function LeadershipReport({ analysis }) {
           .rpt-page h4 { font-size:0.76rem !important; }
           .rpt-card { padding:12px !important; }
           .rpt-page:last-child { page-break-after:auto !important; break-after:auto !important; }
+          /* Dense pages — tighter typography */
           .rpt-page-4 p, .rpt-page-4 li,
           .rpt-page-7 p, .rpt-page-7 li,
-          .rpt-page-10 p, .rpt-page-10 li {
+          .rpt-page-10 p, .rpt-page-10 li,
+          .rpt-page-dense p, .rpt-page-dense li {
             font-size:0.61rem !important;
             line-height:1.34 !important;
           }
           .rpt-page-4 .rpt-card,
           .rpt-page-7 .rpt-card,
-          .rpt-page-10 .rpt-card {
+          .rpt-page-10 .rpt-card,
+          .rpt-page-dense .rpt-card {
             padding:10px !important;
           }
           .rpt-tight-grid { gap:0.6rem !important; }
@@ -279,13 +429,16 @@ export default function LeadershipReport({ analysis }) {
           </div>
 
           {/* Table of contents */}
-          <div className="relative grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6 rpt-no-break">
+          <div className="relative grid grid-cols-3 sm:grid-cols-5 gap-2 mb-6 rpt-no-break">
             {[
-              { num:"02", title:"Executive Summary" }, { num:"03", title:"Competency Breakdown" },
-              { num:"04", title:"Leadership Archetype" }, { num:"05", title:"Top Growth Gaps" },
-              { num:"06", title:"90-Day Roadmap" }, { num:"07", title:"Sprint & Stakeholders" },
-              { num:"08", title:"Benchmark Analysis" }, { num:"09", title:"Evolution Path" },
-              { num:"10", title:"Final Reflection" }, { num:"——", title:"careera.co" },
+              { num:"02", title:"Executive Summary" },   { num:"03", title:"Competency Breakdown" },
+              { num:"04", title:"Competency Deep-Dive" },{ num:"05", title:"Leadership Archetype" },
+              { num:"06", title:"Decision Matrix" },      { num:"07", title:"Top Growth Gaps" },
+              { num:"08", title:"Risk & Metrics" },       { num:"09", title:"90-Day Roadmap" },
+              { num:"10", title:"Sprint & Stakeholders" },{ num:"11", title:"Talent Development" },
+              { num:"12", title:"Benchmark Analysis" },   { num:"13", title:"Stakeholder Map" },
+              { num:"14", title:"Evolution Path" },       { num:"15", title:"Final Reflection" },
+              { num:"——", title:"careera.co" },
             ].map(s => (
               <div key={s.num} className="flex items-center gap-2 px-3 py-2 border border-zinc-800/60 rounded-lg">
                 <span className="text-[9px] font-mono text-zinc-700 shrink-0">{s.num}</span>
@@ -299,7 +452,7 @@ export default function LeadershipReport({ analysis }) {
               { label:"Overall Score", value:`${analysis.leadershipScore}/100` },
               { label:"Strongest Area", value:sorted[0].name.split(" ")[0] },
               { label:"Priority Gap",   value:sorted[sorted.length-1].name.split(" ")[0] },
-              { label:"Report Pages",   value:"10" },
+              { label:"Report Pages",   value:"15" },
             ].map(s => (
               <div key={s.label} className="text-center">
                 <div className="text-[9px] font-mono text-zinc-700 uppercase tracking-widest mb-1">{s.label}</div>
@@ -528,9 +681,64 @@ export default function LeadershipReport({ analysis }) {
           </div>
         </Page>
 
-        {/* ═══ PAGE 4 — ARCHETYPE ════════════════════════════════════════════ */}
+        {/* ═══ PAGE 4 — COMPETENCY DEEP-DIVE ════════════════════════════════ */}
+        <Page breakBefore className="rpt-page-4">
+          <PageHeader number={4} title="Competency Deep-Dive" subtitle="Individual competency profiles, developmental context, and high-leverage actions" />
+
+          <div className="grid grid-cols-2 gap-4 rpt-tight-grid">
+            {sorted.map((comp, idx) => {
+              const levelColors = { Expert:"text-white", Advanced:"text-zinc-300", Developing:"text-zinc-400", Foundational:"text-zinc-500" };
+              const deepDive = analysis.deepDive?.[comp.name] || analysis.competencies.find(c => c.name === comp.name)?.deepDive || null;
+              const actions = analysis.competencies.find(c => c.name === comp.name)?.quickWins ||
+                (comp.level === "Expert" || comp.level === "Advanced"
+                  ? ["Mentor a peer in this area", "Demonstrate it in exec-level forums"]
+                  : ["Shadow someone advanced in this", "Set a 30-day measurable micro-goal"]);
+              return (
+                <SectionCard key={comp.name} className="p-4 rpt-card rpt-no-break">
+                  <div className="flex items-start gap-3 mb-2.5">
+                    <ProgressRing score={comp.score} size={52} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-semibold text-zinc-200 leading-tight mb-0.5 truncate">{comp.name}</div>
+                      <span className={`text-[9px] font-mono uppercase tracking-widest ${levelColors[comp.level] || "text-zinc-500"}`}>{comp.level}</span>
+                      <div className="mt-1.5 h-0.5 bg-zinc-800 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-gradient-to-r from-zinc-600 to-zinc-200" style={{ width:`${comp.score}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                  {deepDive && (
+                    <p className="text-[10px] text-zinc-500 leading-relaxed mb-2.5 rpt-tight-mb">{deepDive}</p>
+                  )}
+                  {!deepDive && (
+                    <p className="text-[10px] text-zinc-500 leading-relaxed mb-2.5 rpt-tight-mb">
+                      {comp.level === "Expert" || comp.level === "Advanced"
+                        ? `This is a clear strength. Your ${comp.score}/100 score positions you ahead of most peers. Focus on leveraging it for organisational impact and teaching others.`
+                        : `Scores below 70 signal a development gap worth addressing deliberately. Consistent small actions here compound into measurable leadership growth within 90 days.`}
+                    </p>
+                  )}
+                  <div className="border-t border-zinc-800/50 pt-2 space-y-1 rpt-tight-mb">
+                    <div className="text-[8px] font-mono text-zinc-700 uppercase tracking-widest mb-1">High-leverage actions</div>
+                    {(Array.isArray(actions) ? actions.slice(0, 2) : [actions]).map((a, i) => (
+                      <div key={i} className="flex items-start gap-1.5">
+                        <span className="text-zinc-700 font-mono text-[8px] shrink-0 mt-0.5">→</span>
+                        <span className="text-[9px] text-zinc-500 leading-snug">{a}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-2 text-[8px] font-mono text-zinc-700">
+                    Peer avg: <span className="text-zinc-500">{peerAvg(comp.score, comp.level)}/100</span>
+                    {comp.score >= peerAvg(comp.score, comp.level)
+                      ? <span className="text-zinc-500"> · You lead</span>
+                      : <span className="text-zinc-600"> · Gap: {peerAvg(comp.score, comp.level) - comp.score} pts</span>}
+                  </div>
+                </SectionCard>
+              );
+            })}
+          </div>
+        </Page>
+
+        {/* ═══ PAGE 5 — ARCHETYPE ════════════════════════════════════════════ */}
         <Page breakBefore>
-          <PageHeader number={4} title="Your Leadership Archetype" />
+          <PageHeader number={5} title="Your Leadership Archetype" />
 
           <div className="relative rounded-2xl border border-white/20 bg-gradient-to-br from-white/6 to-zinc-950 p-7 mb-5 overflow-hidden rpt-no-break">
             <div className="absolute top-0 right-0 w-56 h-56 rounded-full pointer-events-none"
@@ -645,9 +853,125 @@ export default function LeadershipReport({ analysis }) {
           </SectionCard>
         </Page>
 
-        {/* ═══ PAGE 5 — GROWTH GAPS ══════════════════════════════════════════ */}
+        {/* ═══ PAGE 6 — DECISION MATRIX & OPERATING CADENCE ═══════════════════ */}
+        <Page breakBefore className="rpt-page-dense">
+          <PageHeader number={6} title="Decision Matrix & Operating Cadence" subtitle="Where to focus your attention — and how to structure your days, weeks, and months" />
+
+          <div className="grid grid-cols-2 gap-5 mb-5">
+            {/* Decision Matrix */}
+            <div className="rpt-no-break">
+              <SubHeader>Priority Matrix</SubHeader>
+              <SectionCard className="p-4 rpt-card">
+                <p className="text-[10px] text-zinc-600 mb-3 leading-relaxed">Visualises your most important leadership initiatives by effort and impact. Focus on the top-left quadrant first — these actions compound fastest.</p>
+                <div className="flex justify-center">
+                  <QuadrantChart
+                    topLeft={
+                      analysis.decisionMatrix?.immediateWins?.slice(0, 3) ||
+                      ["Streamline team 1:1 cadence", "Create clarity on team OKRs", "Identify one quick stakeholder win"]
+                    }
+                    topRight={
+                      analysis.decisionMatrix?.strategicBets?.slice(0, 2) ||
+                      ["Design delegation framework", "Build cross-functional coalition"]
+                    }
+                    bottomLeft={["Automate status reporting", "Clean up outdated processes"]}
+                    bottomRight={["Large org restructuring", "New tooling rollout"]}
+                    width={310} height={220}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  {[
+                    { label: "Do Now", desc: "High impact · Low effort" },
+                    { label: "Plan",   desc: "High impact · High effort" },
+                    { label: "Delegate", desc: "Low impact · Low effort" },
+                    { label: "Deprioritise", desc: "Low impact · High effort" },
+                  ].map((q, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${i === 0 ? "bg-white" : "bg-zinc-700"}`} />
+                      <div>
+                        <span className="text-[9px] font-semibold text-zinc-400">{q.label}</span>
+                        <span className="text-[8px] text-zinc-700 ml-1 font-mono">{q.desc}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+            </div>
+
+            {/* Operating Cadence */}
+            <div className="rpt-no-break">
+              <SubHeader>Operating Cadence</SubHeader>
+              <div className="space-y-3">
+                {[
+                  {
+                    period: "Daily",
+                    icon: <span className="text-zinc-500 font-mono text-[9px]">DAY</span>,
+                    items: analysis.operatingCadence?.daily || [
+                      "15-min priorities review at day-start",
+                      "One meaningful coaching interaction",
+                      "Clear blockers from yesterday's commitments",
+                    ],
+                  },
+                  {
+                    period: "Weekly",
+                    icon: <span className="text-zinc-500 font-mono text-[9px]">WK</span>,
+                    items: analysis.operatingCadence?.weekly || [
+                      "Team sync: progress, blockers, alignment",
+                      "One leadership development reflection",
+                      "Stakeholder update to a key partner",
+                      "Review OKR progress and adjust",
+                    ],
+                  },
+                  {
+                    period: "Monthly",
+                    icon: <span className="text-zinc-500 font-mono text-[9px]">MO</span>,
+                    items: analysis.operatingCadence?.monthly || [
+                      "1:1 deep-dive with each direct report",
+                      "Strategic alignment check with manager",
+                      "Team retrospective on operating model",
+                      "Personal growth review vs 90-day plan",
+                    ],
+                  },
+                ].map(({ period, icon, items }) => (
+                  <SectionCard key={period} className="p-3.5 rpt-card">
+                    <div className="flex items-center gap-2 mb-2">
+                      {icon}
+                      <span className="text-[9px] font-mono text-zinc-500 tracking-widest uppercase">{period} Habits</span>
+                    </div>
+                    <div className="space-y-1">
+                      {items.map((item, i) => (
+                        <div key={i} className="flex items-start gap-1.5">
+                          <span className="text-zinc-700 font-mono text-[8px] shrink-0 mt-0.5">{String(i + 1).padStart(2, "0")}</span>
+                          <span className="text-[9px] text-zinc-500 leading-snug">{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </SectionCard>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Reflective questions strip */}
+          <SectionCard className="p-4 rpt-card rpt-no-break">
+            <div className="text-[8px] font-mono text-zinc-700 uppercase tracking-widest mb-2">Weekly reflection prompts</div>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                "What's one thing I delegated this week that I should have done earlier?",
+                "Which relationship needs more investment — and what's one action I can take?",
+                "What did I learn about my leadership this week that I'll carry into next week?",
+              ].map((q, i) => (
+                <div key={i} className="flex items-start gap-1.5">
+                  <span className="text-zinc-700 font-mono text-[8px] shrink-0 mt-0.5 font-semibold">{i + 1}.</span>
+                  <span className="text-[9px] text-zinc-500 leading-relaxed italic">{q}</span>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </Page>
+
+        {/* ═══ PAGE 7 — GROWTH GAPS ══════════════════════════════════════════ */}
         <Page breakBefore className="rpt-page-7">
-          <PageHeader number={5} title="Your Top 3 Growth Gaps" />
+          <PageHeader number={7} title="Your Top 3 Growth Gaps" />
           <p className="text-sm text-zinc-500 mb-5 leading-relaxed">
             These three areas represent the highest-return investments of your development time. Each gap is rated High Priority because it sits at the intersection of current weakness and future leadership requirements. Addressing all three within 90 days will produce a measurable shift in your leadership effectiveness and visibility.
           </p>
@@ -706,9 +1030,82 @@ export default function LeadershipReport({ analysis }) {
           </div>
         </Page>
 
-        {/* ═══ PAGE 6 — 90-DAY ROADMAP ═══════════════════════════════════════ */}
+        {/* ═══ PAGE 8 — RISK REGISTER & METRICS ═══════════════════════════════ */}
+        <Page breakBefore className="rpt-page-dense">
+          <PageHeader number={8} title="Risk Register & Metrics Dashboard" subtitle="Known risks to your leadership effectiveness — and the KPIs that will signal real growth" />
+
+          <SubHeader>Leadership Risk Register</SubHeader>
+          <SectionCard className="p-0 overflow-hidden mb-5 rpt-no-break">
+            <div className="grid grid-cols-[1fr_auto_1.5fr_0.7fr] text-[8px] font-mono text-zinc-700 uppercase tracking-wider px-4 py-2 border-b border-zinc-800/60 bg-zinc-900/40">
+              <span>Risk</span><span>Impact</span><span>Mitigation</span><span>Owner</span>
+            </div>
+            {(analysis.riskRegister || [
+              { risk: "Delegation avoidance keeps you in execution mode", impact: "High",   mitigation: "Assign one meaningful task to a direct report each week — track outcomes, not methods", owner: "You" },
+              { risk: "Unclear communication leads to misaligned team effort", impact: "High",   mitigation: "Introduce a weekly written priorities memo; confirm understanding in team sync", owner: "You" },
+              { risk: "Neglected upward relationships reduce political capital", impact: "Medium", mitigation: "Schedule monthly 30-min strategy check-in with your manager; come with an agenda", owner: "You" },
+              { risk: "Burnout from overextension across too many priorities", impact: "High",   mitigation: "Ruthlessly apply the priority matrix; protect at least one strategic focus block per day", owner: "You" },
+              { risk: "Peer relationships atrophy as scope increases", impact: "Medium", mitigation: "One proactive cross-functional lunch, call, or Slack message per week", owner: "You" },
+              { risk: "Team development falls behind operational pressure", impact: "Medium", mitigation: "Block one 90-min coaching or mentoring session per month per direct report", owner: "You" },
+            ]).map((row, i) => (
+              <div key={i} className={`grid grid-cols-[1fr_auto_1.5fr_0.7fr] px-4 py-2.5 gap-2 ${i % 2 === 0 ? "bg-zinc-900/20" : ""} border-b border-zinc-800/30 last:border-b-0`}>
+                <span className="text-[9px] text-zinc-400 leading-snug">{row.risk}</span>
+                <span className="self-start mt-0.5"><RiskBadge impact={row.impact} /></span>
+                <span className="text-[9px] text-zinc-500 leading-snug">{row.mitigation}</span>
+                <span className="text-[9px] font-mono text-zinc-600">{row.owner}</span>
+              </div>
+            ))}
+          </SectionCard>
+
+          <SubHeader>Leading Metrics to Track</SubHeader>
+          <div className="grid grid-cols-2 gap-4">
+            <SectionCard className="p-4 rpt-card rpt-no-break">
+              <div className="text-[8px] font-mono text-zinc-700 uppercase tracking-widest mb-3">Leading Indicators (Behaviour)</div>
+              <div className="space-y-3">
+                {(analysis.metricsDashboard?.leadingIndicators || [
+                  "% of weekly decisions made by the team, not by you",
+                  "Number of coaching conversations initiated per week",
+                  "Stakeholder response latency (avg hours to meaningful reply)",
+                  "Number of strategic priorities actively progressed this week",
+                ]).map((kpi, i) => (
+                  <KpiBar key={i} label={kpi} target="" index={i} />
+                ))}
+              </div>
+            </SectionCard>
+            <SectionCard className="p-4 rpt-card rpt-no-break">
+              <div className="text-[8px] font-mono text-zinc-700 uppercase tracking-widest mb-3">Lagging Indicators (Outcomes)</div>
+              <div className="space-y-3">
+                {(analysis.metricsDashboard?.laggingIndicators || [
+                  "Team engagement score (quarterly pulse)",
+                  "Delivery reliability: % commitments met on time",
+                  "Peer feedback score (360 — next cycle)",
+                  "OKR attainment rate at end of quarter",
+                ]).map((kpi, i) => (
+                  <KpiBar key={i} label={kpi} target="" index={i + 4} />
+                ))}
+              </div>
+            </SectionCard>
+          </div>
+
+          <div className="mt-4 p-4 rounded-xl border border-zinc-800/50 bg-zinc-900/30 rpt-no-break">
+            <div className="text-[8px] font-mono text-zinc-700 uppercase tracking-widest mb-2">Measurement protocol</div>
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                { cadence:"Weekly", action:"Self-rate on 3 leading indicators in a private journal or sheet. Note patterns." },
+                { cadence:"Monthly", action:"Review lagging outcomes against your 90-day plan. Adjust tactics, not goals." },
+                { cadence:"Quarterly", action:"Run a lightweight 360 with 3–5 peers. Compare to your self-ratings for calibration." },
+              ].map((item, i) => (
+                <div key={i}>
+                  <div className="text-[9px] font-semibold text-zinc-400 mb-1">{item.cadence}</div>
+                  <p className="text-[9px] text-zinc-600 leading-relaxed">{item.action}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Page>
+
+        {/* ═══ PAGE 9 — 90-DAY ROADMAP ═══════════════════════════════════════ */}
         <Page breakBefore>
-          <PageHeader number={6} title="90-Day Leadership Roadmap" />
+          <PageHeader number={9} title="90-Day Leadership Roadmap" />
           <p className="text-sm text-zinc-500 mb-5 leading-relaxed">
             A phased 90-day plan built around the three most critical shifts your leadership profile requires. Each month builds on the last — execute in sequence. Do not jump ahead. Progress compounds when foundations are built in order.
           </p>
@@ -769,9 +1166,9 @@ export default function LeadershipReport({ analysis }) {
           </div>
         </Page>
 
-        {/* ═══ PAGE 7 — SPRINT & STAKEHOLDERS ═══════════════════════════════ */}
+        {/* ═══ PAGE 10 — SPRINT & STAKEHOLDERS ═══════════════════════════════ */}
         <Page breakBefore>
-          <PageHeader number={7} title="First 7-Day Sprint & Stakeholder Strategy" />
+          <PageHeader number={10} title="First 7-Day Sprint & Stakeholder Strategy" />
 
           <SubHeader>First 7-Day Action Sprint</SubHeader>
           <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
@@ -835,9 +1232,138 @@ export default function LeadershipReport({ analysis }) {
           </div>
         </Page>
 
-        {/* ═══ PAGE 8 — BENCHMARK ════════════════════════════════════════════ */}
+        {/* ═══ PAGE 11 — TALENT DEVELOPMENT PLAN ════════════════════════════ */}
+        <Page breakBefore className="rpt-page-dense">
+          <PageHeader number={11} title="Talent Development Plan" subtitle="How to build, stretch, and position your team for high performance and retention" />
+
+          {/* 3-column talent strategy */}
+          <div className="grid grid-cols-3 gap-4 mb-5">
+            {[
+              {
+                tier: "Accelerate",
+                desc: "High performers ready for stretch assignments or promotion within 12 months.",
+                color: "text-zinc-200",
+                bg: "from-zinc-800/40 to-zinc-900/20",
+                border: "border-zinc-600/40",
+                actions: analysis.talentPlan?.accelerate || [
+                  "Assign visible cross-functional project",
+                  "Connect to a senior sponsor",
+                  "Create a stretch goal beyond current scope",
+                  "Discuss career path explicitly in next 1:1",
+                ],
+              },
+              {
+                tier: "Stabilise",
+                desc: "Solid contributors who need clarity, consistency, and targeted skill development.",
+                color: "text-zinc-400",
+                bg: "from-zinc-900/40 to-zinc-900/10",
+                border: "border-zinc-700/30",
+                actions: analysis.talentPlan?.stabilise || analysis.talentPlan?.stabilize || [
+                  "Clarify role expectations in writing",
+                  "Identify one skill gap to work on together",
+                  "Increase positive reinforcement frequency",
+                  "Check for hidden blockers or frustrations",
+                ],
+              },
+              {
+                tier: "Delegate",
+                desc: "Trusted owners — free them to run their area while you focus on broader scope.",
+                color: "text-zinc-500",
+                bg: "from-zinc-900/20 to-zinc-950/40",
+                border: "border-zinc-800/20",
+                actions: analysis.talentPlan?.delegate || [
+                  "Transfer full ownership of a domain",
+                  "Remove approval gates — trust outcomes",
+                  "Connect them with key stakeholders directly",
+                  "Reduce check-in cadence; trust their judgement",
+                ],
+              },
+            ].map(({ tier, desc, color, bg, border, actions }) => (
+              <SectionCard key={tier} className={`p-4 bg-gradient-to-br ${bg} border ${border} rpt-card rpt-no-break`}>
+                <div className={`text-[10px] font-semibold ${color} mb-1 font-mono tracking-wider uppercase`}>{tier}</div>
+                <p className="text-[9px] text-zinc-600 leading-relaxed mb-3">{desc}</p>
+                <div className="space-y-1.5">
+                  {actions.map((a, i) => (
+                    <div key={i} className="flex items-start gap-1.5">
+                      <span className="text-zinc-700 font-mono text-[8px] shrink-0 mt-0.5">→</span>
+                      <span className="text-[9px] text-zinc-500 leading-snug">{a}</span>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+            ))}
+          </div>
+
+          {/* Talent development calendar visual */}
+          <SubHeader>90-Day Talent Development Calendar</SubHeader>
+          <SectionCard className="p-4 rpt-card rpt-no-break mb-5">
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                {
+                  month: "Month 1 — Diagnose",
+                  items: [
+                    "Complete a full team strengths audit",
+                    "Review each team member's goals and blockers",
+                    "Identify who is in which tier (above)",
+                    "Baseline team engagement via informal pulse",
+                  ],
+                },
+                {
+                  month: "Month 2 — Design",
+                  items: [
+                    "Create individual development plans for each tier",
+                    "Assign one stretch task per Accelerate candidate",
+                    "Introduce skill-building resource for Stabilise tier",
+                    "Define success metrics for each person's quarter",
+                  ],
+                },
+                {
+                  month: "Month 3 — Develop",
+                  items: [
+                    "Run mid-cycle check-ins against each plan",
+                    "Celebrate visible progress publicly",
+                    "Escalate promotion case for ready candidates",
+                    "Retrospect: what worked, what to adjust for Q2",
+                  ],
+                },
+              ].map(({ month, items }) => (
+                <div key={month}>
+                  <div className="text-[9px] font-semibold text-zinc-400 mb-2 font-mono">{month}</div>
+                  <div className="space-y-1.5">
+                    {items.map((item, i) => (
+                      <div key={i} className="flex items-start gap-1.5">
+                        <span className="text-zinc-700 font-mono text-[8px] shrink-0 mt-0.5">{String(i + 1).padStart(2, "0")}</span>
+                        <span className="text-[9px] text-zinc-600 leading-snug">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          {/* Coaching principles strip */}
+          <SectionCard className="p-4 rpt-card rpt-no-break">
+            <div className="text-[8px] font-mono text-zinc-700 uppercase tracking-widest mb-2">Coaching principles for managers</div>
+            <div className="grid grid-cols-4 gap-3">
+              {[
+                { principle: "Ask, don't tell", note: "Questions develop capability faster than answers" },
+                { principle: "Name the potential", note: "People rise to the expectations you make visible" },
+                { principle: "Feedback frequency", note: "Small, timely signals beat annual reviews" },
+                { principle: "Follow through", note: "Commitments made in 1:1s build or erode trust" },
+              ].map(({ principle, note }) => (
+                <div key={principle}>
+                  <div className="text-[9px] font-semibold text-zinc-400 mb-0.5">{principle}</div>
+                  <p className="text-[8px] text-zinc-600 leading-snug">{note}</p>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </Page>
+
+        {/* ═══ PAGE 12 — BENCHMARK ════════════════════════════════════════════ */}
         <Page breakBefore className="rpt-page-10">
-          <PageHeader number={8} title="Benchmark Comparison" />
+          <PageHeader number={12} title="Benchmark Comparison" />
           <p className="text-sm text-zinc-500 mb-5 leading-relaxed">
             How your scores compare to a peer cohort of managers at a similar stage. Peer averages reflect assessment data across the same leadership tier. Use this data to understand where you have a competitive advantage and where targeted development would move you into the top quartile.
           </p>
@@ -916,9 +1442,113 @@ export default function LeadershipReport({ analysis }) {
           </SectionCard>
         </Page>
 
-        {/* ═══ PAGE 9 — EVOLUTION PATH ═══════════════════════════════════════ */}
+        {/* ═══ PAGE 13 — STAKEHOLDER MAP & MEETING BLUEPRINT ═════════════════ */}
+        <Page breakBefore className="rpt-page-dense">
+          <PageHeader number={13} title="Stakeholder Map & Meeting Blueprint" subtitle="How to position yourself with key stakeholders — and run meetings that build trust and momentum" />
+
+          <div className="grid grid-cols-2 gap-5 mb-5">
+            {/* Stakeholder Map */}
+            <div className="rpt-no-break">
+              <SubHeader>Stakeholder Influence Map</SubHeader>
+              <SectionCard className="p-4 rpt-card">
+                <p className="text-[9px] text-zinc-600 mb-3 leading-relaxed">Your primary stakeholders mapped by influence level and alignment with your goals. Prioritise top-right (Partner zone) for deepest relationship investment.</p>
+                <div className="flex justify-center">
+                  <StakeholderMapSvg width={290} height={200} />
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  {[
+                    { zone: "Partner",  action: "Weekly check-in · Share early thinking · Seek input" },
+                    { zone: "Inform",   action: "Monthly update · Succinct written memo" },
+                    { zone: "Monitor",  action: "Engage proactively before key decisions" },
+                    { zone: "Maintain", action: "Quarterly update · Surface wins regularly" },
+                  ].map(({ zone, action }) => (
+                    <div key={zone} className="flex items-start gap-1.5">
+                      <span className="text-zinc-500 font-mono text-[8px] shrink-0 mt-0.5 font-semibold">{zone}:</span>
+                      <span className="text-[8px] text-zinc-600 leading-snug">{action}</span>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+            </div>
+
+            {/* Stakeholder Playbook */}
+            <div className="rpt-no-break">
+              <SubHeader>Stakeholder Playbook</SubHeader>
+              <div className="space-y-3">
+                {(analysis.stakeholderPlaybook || [
+                  { stakeholder: "Your Manager", approach: "Lead with outcomes, not activity. Bring solutions. Surface issues early with a proposed path forward." },
+                  { stakeholder: "Peer Leaders", approach: "Find shared interests. Offer your help before asking for theirs. Invest in their wins to build cross-functional trust." },
+                  { stakeholder: "Your Team", approach: "Communicate context, not just tasks. Create psychological safety. Celebrate effort, not just outcomes." },
+                  { stakeholder: "Senior Executives", approach: "Be concise. Frame in business impact. Know their priorities and connect your work to them explicitly." },
+                ]).map((item, i) => (
+                  <SectionCard key={i} className="p-3 rpt-card">
+                    <div className="text-[9px] font-semibold text-zinc-300 mb-0.5">{item.stakeholder}</div>
+                    <p className="text-[9px] text-zinc-500 leading-relaxed">{item.approach}</p>
+                  </SectionCard>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Meeting Blueprint */}
+          <SubHeader>Meeting Blueprint</SubHeader>
+          <div className="grid grid-cols-3 gap-4 rpt-no-break">
+            {[
+              {
+                type: "Team Sync",
+                cadence: analysis.meetingBlueprint?.team?.cadence || "Weekly · 45 min",
+                purpose: analysis.meetingBlueprint?.team?.purpose || "Alignment, blockers, decisions",
+                agenda: analysis.meetingBlueprint?.team?.agenda || [
+                  "What moved forward since last week?",
+                  "What is blocked and needs help?",
+                  "What decisions need to be made today?",
+                ],
+              },
+              {
+                type: "Leadership 1:1",
+                cadence: analysis.meetingBlueprint?.leadership?.cadence || "Bi-weekly · 30 min",
+                purpose: analysis.meetingBlueprint?.leadership?.purpose || "Coaching, feedback, career",
+                agenda: analysis.meetingBlueprint?.leadership?.agenda || [
+                  "How are you feeling about your work?",
+                  "What's the most important thing on your mind?",
+                  "How can I best support you right now?",
+                ],
+              },
+              {
+                type: "Stakeholder Review",
+                cadence: analysis.meetingBlueprint?.stakeholder?.cadence || "Monthly · 30 min",
+                purpose: analysis.meetingBlueprint?.stakeholder?.purpose || "Trust, alignment, influence",
+                agenda: analysis.meetingBlueprint?.stakeholder?.agenda || [
+                  "What's the most important update from our area?",
+                  "Where do we need your perspective or input?",
+                  "What would make our collaboration more effective?",
+                ],
+              },
+            ].map(({ type, cadence, purpose, agenda }) => (
+              <SectionCard key={type} className="p-4 rpt-card">
+                <div className="text-[10px] font-semibold text-zinc-300 mb-0.5">{type}</div>
+                <div className="flex items-center gap-2 mb-2.5">
+                  <span className="text-[8px] font-mono text-zinc-600">{cadence}</span>
+                  <span className="text-[8px] text-zinc-700">·</span>
+                  <span className="text-[8px] text-zinc-600 italic">{purpose}</span>
+                </div>
+                <div className="text-[8px] font-mono text-zinc-700 uppercase tracking-wider mb-1.5">Agenda</div>
+                <div className="space-y-1.5">
+                  {agenda.map((item, i) => (
+                    <div key={i} className="flex items-start gap-1.5">
+                      <span className="text-zinc-700 font-mono text-[8px] shrink-0 mt-0.5">{i + 1}.</span>
+                      <span className="text-[9px] text-zinc-500 leading-snug italic">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+            ))}
+          </div>
+        </Page>
+
+        {/* ═══ PAGE 14 — EVOLUTION PATH ═══════════════════════════════════════ */}
         <Page breakBefore>
-          <PageHeader number={9} title="Leadership Evolution Path" />
+          <PageHeader number={14} title="Leadership Evolution Path" />
           <p className="text-sm text-zinc-500 mb-5 leading-relaxed">
             Leadership evolution is not linear — it requires deliberate, stage-specific upgrades in mindset, behaviour, and operating model. The staircase below maps the five stages. You are currently at Stage {step}.
           </p>
@@ -1003,9 +1633,9 @@ export default function LeadershipReport({ analysis }) {
           </SectionCard>
         </Page>
 
-        {/* ═══ PAGE 10 — FINAL REFLECTION ════════════════════════════════════ */}
+        {/* ═══ PAGE 15 — FINAL REFLECTION ════════════════════════════════════ */}
         <Page breakBefore>
-          <PageHeader number={10} title="Final Reflection & Your Next Move" />
+          <PageHeader number={15} title="Final Reflection & Your Next Move" />
 
           <SubHeader>Executive Communication Template</SubHeader>
           <SectionCard className="p-6 mb-5">
