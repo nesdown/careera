@@ -725,13 +725,22 @@ app.post('/api/generate-report', async (req, res) => {
       console.error('AI analysis failed, using fallback:', e.message);
     }
     const analysis = normalizeAnalysis(aiRaw, seed);
-    console.log('Generating PDF...');
-    const pdfBuffer = await generatePdfBuffer(analysis);
-    const pdfBase64 = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
+    console.log('Analysis ready. Score:', analysis.leadershipScore);
+
+    // PDF generation is best-effort — the frontend renders its own in-browser PDF.
+    // We still attempt it and include it if successful, but never fail the request over it.
+    let pdfBase64 = null;
+    try {
+      const pdfBuffer = await generatePdfBuffer(analysis);
+      pdfBase64 = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
+      console.log('Server PDF generated successfully.');
+    } catch (pdfErr) {
+      console.warn('Server PDF generation failed (non-fatal):', pdfErr.message);
+    }
+
     res.json({
       success: true,
-      pdf: pdfBase64,
-      filename: `Careera-Leadership-Report-${Date.now()}.pdf`,
+      ...(pdfBase64 ? { pdf: pdfBase64, filename: `Careera-Leadership-Report-${Date.now()}.pdf` } : {}),
       analysis,
     });
   } catch (error) {
