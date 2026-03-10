@@ -318,6 +318,14 @@ export function getActiveQuestions() {
   return variant === 'A' ? questionsA : questionsB;
 }
 
+// Returns the question indices (0-based) that trigger section-complete milestone celebrations.
+// Variant A (12 q): celebrate after section 2 (q6, idx 5) and section 4 (q11, idx 10)
+// Variant B (12 q): celebrate after section 2 (q5, idx 4) and section 4 (q10, idx 9)
+export function getActiveMilestones() {
+  const variant = getQuestionnaireVariant();
+  return variant === 'A' ? [5, 10] : [4, 9];
+}
+
 // Legacy export for backward compatibility
 export const questions = questionsA;
 
