@@ -1,6 +1,7 @@
 /**
  * LeadershipReport — dense 10-page leadership report, print-ready.
  */
+import { useId } from "react";
 import { motion } from "framer-motion";
 import {
   CheckCircle, AlertTriangle, ChevronRight, Target, Zap,
@@ -91,31 +92,35 @@ function GridBg() {
 
 // ─── SVG components ───────────────────────────────────────────────────────────
 function RadialGauge({ score, size = 140 }) {
+  const glowId = useId();
   const r = (size / 2) * 0.78, cx = size / 2, cy = size / 2;
   const circ = 2 * Math.PI * r, arc = 0.75;
   const dTotal = circ * arc, dFilled = dTotal * (score / 100), gap = circ - dTotal;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
       <defs>
-        <filter id="gg"><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+        <filter id={glowId}><feGaussianBlur stdDeviation="3" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
       </defs>
       <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={size*0.065} strokeDasharray={`${dTotal} ${gap}`} strokeLinecap="round" transform={`rotate(135 ${cx} ${cy})`} />
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="white" strokeWidth={size*0.065} strokeDasharray={`${dFilled} ${circ-dFilled}`} strokeLinecap="round" transform={`rotate(135 ${cx} ${cy})`} filter="url(#gg)" opacity={0.9} />
-      <text x={cx} y={cy-4} textAnchor="middle" fill="white" fontSize={size*0.22} fontWeight="700" fontFamily="monospace">{score}</text>
-      <text x={cx} y={cy+size*0.14} textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize={size*0.1} fontFamily="monospace">/100</text>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="white" strokeWidth={size*0.065} strokeDasharray={`${dFilled} ${circ-dFilled}`} strokeLinecap="round" transform={`rotate(135 ${cx} ${cy})`} filter={`url(#${glowId})`} opacity={0.9} />
+      <text x={cx} y={cy - 4} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={size*0.22} fontWeight="700" fontFamily="monospace">{score}</text>
+      <text x={cx} y={cy + size*0.14} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.4)" fontSize={size*0.1} fontFamily="monospace">/100</text>
     </svg>
   );
 }
 
 function RadarChart({ competencies, size = 260 }) {
-  const n = competencies.length, cx = size/2, cy = size/2, R = size*0.36;
+  const gradientId = useId();
+  const outerPad = 34;
+  const canvas = size + outerPad * 2;
+  const n = competencies.length, cx = canvas/2, cy = canvas/2, R = size*0.31;
   const ang = (i) => (Math.PI*2*i)/n - Math.PI/2;
   const pt  = (sc, i) => ({ x: cx+(sc/100)*R*Math.cos(ang(i)), y: cy+(sc/100)*R*Math.sin(ang(i)) });
   const pts = competencies.map((c,i) => pt(c.score,i));
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
+    <svg width={size} height={size} viewBox={`0 0 ${canvas} ${canvas}`} className="overflow-visible">
       <defs>
-        <radialGradient id="rf" cx="50%" cy="50%" r="50%">
+        <radialGradient id={gradientId} cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="rgba(255,255,255,0.16)" />
           <stop offset="100%" stopColor="rgba(255,255,255,0.03)" />
         </radialGradient>
@@ -124,16 +129,18 @@ function RadarChart({ competencies, size = 260 }) {
         <polygon key={p} points={competencies.map((_,i)=>{const q=pt(p,i);return`${q.x},${q.y}`;}).join(" ")} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
       ))}
       {competencies.map((_,i) => { const o=pt(100,i); return <line key={i} x1={cx} y1={cy} x2={o.x} y2={o.y} stroke="rgba(255,255,255,0.06)" strokeWidth={1} />; })}
-      <polygon points={pts.map(p=>`${p.x},${p.y}`).join(" ")} fill="url(#rf)" stroke="rgba(255,255,255,0.55)" strokeWidth={1.5} />
+      <polygon points={pts.map(p=>`${p.x},${p.y}`).join(" ")} fill={`url(#${gradientId})`} stroke="rgba(255,255,255,0.55)" strokeWidth={1.5} />
       {pts.map((p,i) => <circle key={i} cx={p.x} cy={p.y} r={3.5} fill="white" opacity={0.75} />)}
       {competencies.map((c,i) => {
-        const lr=R+22, lx=cx+lr*Math.cos(ang(i)), ly=cy+lr*Math.sin(ang(i));
+        const lr=R+30, lx=cx+lr*Math.cos(ang(i)), ly=cy+lr*Math.sin(ang(i));
         const anchor=Math.cos(ang(i))>0.15?"start":Math.cos(ang(i))<-0.15?"end":"middle";
         const [w1,w2]=c.name.split(" & ");
         return (
           <g key={i}>
-            <text x={lx} y={ly} textAnchor={anchor} fill="rgba(255,255,255,0.5)" fontSize={8.5} fontFamily="monospace">{w1}</text>
-            {w2&&<text x={lx} y={ly+10} textAnchor={anchor} fill="rgba(255,255,255,0.35)" fontSize={7.5} fontFamily="monospace">& {w2}</text>}
+            <text x={lx} y={w2 ? ly-4 : ly} textAnchor={anchor} dominantBaseline="middle" fill="rgba(255,255,255,0.5)" fontSize={8.5} fontFamily="monospace">
+              <tspan x={lx}>{w1}</tspan>
+              {w2 && <tspan x={lx} dy="10" fill="rgba(255,255,255,0.35)">& {w2}</tspan>}
+            </text>
           </g>
         );
       })}
@@ -176,12 +183,13 @@ const EVOLUTION_STEPS = [
 ];
 
 function EvolutionStaircase({ currentStep }) {
-  const W = 560, H = 280, stepW = W / 5, stepH = H / 5;
+  const W = 560, H = 252, stepW = W / 5, stepH = H / 5;
   return (
-    <svg width="100%" viewBox={`0 0 ${W} ${H+40}`} className="overflow-visible">
+    <svg width="100%" viewBox={`0 0 ${W} ${H+16}`} className="overflow-visible">
       {EVOLUTION_STEPS.map((s, i) => {
         const x = i*stepW, y = H-(i+1)*stepH;
         const isHere = i+1 === currentStep;
+        const shortMindset = s.mindset.split(" ").slice(0, 3).join(" ");
         return (
           <g key={i}>
             <rect x={x} y={y} width={stepW} height={H-y} fill={isHere?"rgba(255,255,255,0.07)":"rgba(255,255,255,0.02)"} stroke={isHere?"rgba(255,255,255,0.25)":"rgba(255,255,255,0.06)"} strokeWidth={isHere?1:0.5} rx={2} />
@@ -195,11 +203,9 @@ function EvolutionStaircase({ currentStep }) {
                 <circle cx={x+stepW/2} cy={y+55} r={15} fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth={1} />
               </g>
             )}
-            <foreignObject x={x+3} y={H+4} width={stepW-6} height={38}>
-              <div xmlns="http://www.w3.org/1999/xhtml" style={{ fontSize:6.5, color:isHere?"rgba(255,255,255,0.5)":"rgba(255,255,255,0.18)", fontFamily:"monospace", lineHeight:1.4, textAlign:"center" }}>
-                {s.mindset}
-              </div>
-            </foreignObject>
+            <text x={x+stepW/2} y={H+10} textAnchor="middle" fill={isHere?"rgba(255,255,255,0.45)":"rgba(255,255,255,0.18)"} fontSize={6.5} fontFamily="monospace">
+              {shortMindset}
+            </text>
           </g>
         );
       })}
@@ -216,16 +222,16 @@ function ProgressRing({ score, size = 64 }) {
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={size * 0.1} />
       <circle cx={cx} cy={cy} r={r} fill="none" stroke="white" strokeWidth={size * 0.1}
-        strokeDasharray={`${filled} ${circ - filled}`} strokeLinecap="round"
+        strokeDasharray={circ} strokeDashoffset={circ - filled} strokeLinecap="round"
         transform={`rotate(-90 ${cx} ${cy})`} opacity={0.8} />
       <text x={cx} y={cy + size * 0.08} textAnchor="middle" fill="white"
-        fontSize={size * 0.26} fontWeight="700" fontFamily="monospace">{score}</text>
+        dominantBaseline="middle" fontSize={size * 0.26} fontWeight="700" fontFamily="monospace">{score}</text>
     </svg>
   );
 }
 
 function QuadrantChart({ topLeft = [], topRight = [], bottomLeft = [], bottomRight = [], width = 340, height = 230 }) {
-  const pad = { t: 28, r: 12, b: 20, l: 32 };
+  const pad = { t: 28, r: 28, b: 22, l: 36 };
   const W = width - pad.l - pad.r, H = height - pad.t - pad.b;
   const quadrants = [
     { items: topLeft,     x: 0,       y: 0,       fill: "rgba(255,255,255,0.04)",  label: "DO NOW",     lx: W * 0.25, ly: 14 },
@@ -260,11 +266,14 @@ function QuadrantChart({ topLeft = [], topRight = [], bottomLeft = [], bottomRig
           const cx = pad.l + q.x + dx * (W / 2);
           const cy = pad.t + q.y + 22 + dy * (H / 2 - 26);
           const isKey = qi === 0;
+          const onLeft = cx < pad.l + W / 2;
+          const textX = onLeft ? cx + 7 : cx - 7;
+          const anchor = onLeft ? "start" : "end";
           return (
             <g key={`${qi}-${ii}`}>
               <circle cx={cx} cy={cy} r={3.5} fill={isKey ? "white" : "rgba(255,255,255,0.45)"} />
-              <text x={cx + 6} y={cy + 2.5} fill={isKey ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.45)"}
-                fontSize={6.5} fontFamily="sans-serif">{label.length > 28 ? label.slice(0, 28) + "…" : label}</text>
+              <text x={textX} y={cy + 1} textAnchor={anchor} dominantBaseline="middle" fill={isKey ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.45)"}
+                fontSize={6.5} fontFamily="sans-serif">{label.length > 24 ? label.slice(0, 24) + "…" : label}</text>
             </g>
           );
         })
@@ -277,10 +286,10 @@ function StakeholderMapSvg({ width = 300, height = 210 }) {
   const pad = 36;
   const W = width - pad * 2, H = height - pad * 2;
   const zones = [
-    { label: "PARTNER", sub: "Manage closely", x: 0.72, y: 0.22, key: true },
-    { label: "INFORM",  sub: "Keep updated",   x: 0.25, y: 0.25, key: false },
-    { label: "MONITOR", sub: "Watch & engage", x: 0.73, y: 0.75, key: false },
-    { label: "MAINTAIN", sub: "Satisfy",       x: 0.25, y: 0.75, key: false },
+    { label: "PARTNER", sub: "Manage closely", x: 0.74, y: 0.28, key: true },
+    { label: "INFORM",  sub: "Keep updated",   x: 0.26, y: 0.28, key: false },
+    { label: "MONITOR", sub: "Watch & engage", x: 0.74, y: 0.74, key: false },
+    { label: "MAINTAIN", sub: "Satisfy",       x: 0.26, y: 0.74, key: false },
   ];
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
@@ -294,15 +303,19 @@ function StakeholderMapSvg({ width = 300, height = 210 }) {
       <text x={pad - 2} y={pad - 6} fill="rgba(255,255,255,0.2)" fontSize={6} fontFamily="monospace">HIGH ALIGN.</text>
       <text x={pad - 2} y={pad + H + 14} fill="rgba(255,255,255,0.2)" fontSize={6} fontFamily="monospace">LOW ALIGN.</text>
       <text x={pad + W / 2} y={height - 3} textAnchor="middle" fill="rgba(255,255,255,0.25)" fontSize={7} fontFamily="monospace">INFLUENCE →</text>
+      <text x={10} y={pad + H / 2} textAnchor="middle" fill="rgba(255,255,255,0.25)" fontSize={7} fontFamily="monospace"
+        transform={`rotate(-90 10 ${pad + H / 2})`}>ALIGNMENT →</text>
       {zones.map((z, i) => {
-        const cx = pad + z.x * W, cy = pad + (1 - z.y) * H;
+        const cx = pad + z.x * W, cy = pad + z.y * H;
+        const textAnchor = z.x > 0.5 ? "end" : "start";
+        const labelX = z.x > 0.5 ? cx - 10 : cx + 10;
         return (
           <g key={i}>
             {z.key && <circle cx={cx} cy={cy} r={14} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth={0.75} strokeDasharray="3 2" />}
             <circle cx={cx} cy={cy} r={z.key ? 7 : 5} fill={z.key ? "white" : "rgba(255,255,255,0.35)"} />
-            <text x={cx} y={cy - 11} textAnchor="middle" fill={z.key ? "white" : "rgba(255,255,255,0.5)"}
+            <text x={labelX} y={cy - 6} textAnchor={textAnchor} fill={z.key ? "white" : "rgba(255,255,255,0.5)"}
               fontSize={7.5} fontWeight={z.key ? "700" : "400"} fontFamily="sans-serif">{z.label}</text>
-            <text x={cx} y={cy - 3} textAnchor="middle" fill="rgba(255,255,255,0.25)" fontSize={6} fontFamily="monospace">{z.sub}</text>
+            <text x={labelX} y={cy + 2} textAnchor={textAnchor} fill="rgba(255,255,255,0.25)" fontSize={6} fontFamily="monospace">{z.sub}</text>
           </g>
         );
       })}
