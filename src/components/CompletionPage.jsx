@@ -5,7 +5,6 @@ import { Download, Calendar, CheckCircle } from "lucide-react";
 import { getQuestionnaireVariant } from "../data/questions";
 import Navbar from "./Navbar";
 import CalendlyModal from "./CalendlyModal";
-import LeadershipReport from "./LeadershipReport";
 
 // ─── Console log steps ────────────────────────────────────────────────────────
 const STEPS = [
@@ -18,7 +17,7 @@ const STEPS = [
   { id: 6, label: "BUILDING PERSONALISED ACTION FRAMEWORK",  duration: 680 },
   { id: 7, label: "SCORING 5 LEADERSHIP DIMENSIONS",         duration: 540 },
   { id: 8, label: "GENERATING STRATEGIC ROADMAP",            duration: 700 },
-  { id: 9, label: "COMPILING 12-PAGE REPORT",                duration: 999 },
+  { id: 9, label: "COMPILING LONG-FORM PDF REPORT",          duration: 999 },
 ];
 
 function Cursor() {
@@ -290,30 +289,30 @@ function MissionControlConsole({ onComplete, answers }) {
 }
 
 // ─── Completion screen (no report preview) ────────────────────────────────────
-function ReportReady({ analysis }) {
+function ReportReady({ analysis, reportData }) {
   const [showCalendly, setShowCalendly] = useState(false);
-  const reportContainerRef = useRef(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const handleDownload = useCallback(() => {
-    window.print();
-  }, []);
+    if (!reportData?.pdf) return;
+    setIsDownloading(true);
+    try {
+      const link = document.createElement("a");
+      link.href = reportData.pdf;
+      link.download = reportData.filename || "Careera-Leadership-Report.pdf";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      window.setTimeout(() => setIsDownloading(false), 500);
+    }
+  }, [reportData]);
 
   const sorted = [...analysis.competencies].sort((a, b) => b.score - a.score);
 
   return (
     <>
-      {/* Print styles: hide everything on screen except the hidden report */}
-      <style>{`
-        @media print {
-          body { background: #0a0a0a !important; -webkit-print-color-adjust: exact; color-adjust: exact; }
-          .screen-only { display: none !important; }
-          .print-report { display: block !important; }
-        }
-        .print-report { display: none; }
-      `}</style>
-
-      {/* ── Screen UI (hidden in print) ─────────────────────────────────── */}
-      <div className="screen-only min-h-screen bg-[#0a0a0a] flex flex-col relative overflow-hidden">
+      <div className="min-h-screen bg-[#0a0a0a] flex flex-col relative overflow-hidden">
         {/* HUD grid */}
         <div className="fixed inset-0 pointer-events-none"
           style={{
@@ -371,7 +370,7 @@ function ReportReady({ analysis }) {
                 Your Report Is Ready
               </h1>
               <p className="text-sm text-zinc-500">
-                12-page personalised leadership assessment · {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                Long-form personalised leadership PDF · {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
               </p>
             </motion.div>
 
@@ -440,10 +439,11 @@ function ReportReady({ analysis }) {
                 onClick={handleDownload}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.97 }}
-                className="flex items-center justify-center gap-2.5 bg-white/10 border border-white/20 text-white px-5 py-4 rounded-full font-semibold text-sm hover:bg-white/15 transition-colors cursor-pointer"
+                disabled={!reportData?.pdf || isDownloading}
+                className="flex items-center justify-center gap-2.5 bg-white/10 border border-white/20 text-white px-5 py-4 rounded-full font-semibold text-sm hover:bg-white/15 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download className="w-4 h-4" />
-                Download PDF
+                {isDownloading ? "Preparing download..." : "Download PDF"}
                 <span className="text-zinc-500 text-xs">· $29.99</span>
               </motion.button>
 
@@ -483,11 +483,6 @@ function ReportReady({ analysis }) {
         </div>
       </div>
 
-      {/* ── Hidden report rendered only for printing ───────────────────── */}
-      <div ref={reportContainerRef} className="print-report">
-        <LeadershipReport analysis={analysis} />
-      </div>
-
       <CalendlyModal isOpen={showCalendly} onClose={() => setShowCalendly(false)} />
     </>
   );
@@ -496,15 +491,17 @@ function ReportReady({ analysis }) {
 // ─── Orchestrator ─────────────────────────────────────────────────────────────
 export default function CompletionPage({ answers }) {
   const [analysis, setAnalysis] = useState(null);
+  const [reportData, setReportData] = useState(null);
   const [phase, setPhase] = useState("generating");
 
   const handleGenerationComplete = useCallback((data) => {
+    setReportData(data ?? null);
     setAnalysis(data?.analysis ?? null);
     setPhase("ready");
   }, []);
 
   if (phase === "ready" && analysis) {
-    return <ReportReady analysis={analysis} />;
+    return <ReportReady analysis={analysis} reportData={reportData} />;
   }
 
   if (phase === "ready" && !analysis) {

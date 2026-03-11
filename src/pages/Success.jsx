@@ -100,7 +100,7 @@ export default function Success() {
     { label: 'PROFILE RECONSTRUCTED', detail: 'Replaying your questionnaire answers into the engine.' },
     { label: 'COMPETENCY LATTICE SCORED', detail: 'Six-dimension model + archetype + blind spots locked.' },
     { label: 'OPERATING SYSTEM BUILT', detail: 'Operating cadence, metrics dashboard, and risks assembled.' },
-    { label: 'REPORT TYPESSET', detail: 'Designing the 13-page PDF dossier with Careera styling.' },
+    { label: 'REPORT TYPESSET', detail: 'Designing your long-form PDF dossier with Careera styling.' },
     { label: 'ENCRYPTION & DELIVERY', detail: 'Packaging PDF + issuing download token.' },
     { label: 'REPORT READY', detail: 'Download unlocked below.' },
   ];
