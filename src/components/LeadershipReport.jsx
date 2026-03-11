@@ -356,6 +356,19 @@ export default function LeadershipReport({ analysis }) {
   const step    = detectStage(analysis.leadershipStage);
   const nextEvol = EVOLUTION_STEPS[Math.min(step, EVOLUTION_STEPS.length-1)];
   const currEvol = EVOLUTION_STEPS[Math.max(step-1, 0)];
+  const stakeholderPlaybookCards = (analysis.stakeholderPlaybook || []).slice(0, 5).map((item, index) => {
+    if (typeof item === "string") {
+      const [head, ...rest] = item.split(":");
+      return {
+        title: rest.length ? head.trim() : `Priority ${index + 1}`,
+        detail: rest.length ? rest.join(":").trim() : item.trim(),
+      };
+    }
+    return {
+      title: item?.stakeholder || `Priority ${index + 1}`,
+      detail: item?.approach || "",
+    };
+  });
 
   return (
     <>
@@ -385,6 +398,8 @@ export default function LeadershipReport({ analysis }) {
           .rpt-page-dense .rpt-card {
             padding:10px !important;
           }
+          .rpt-page .text-zinc-700 { color:#71717a !important; }
+          .rpt-page .text-zinc-600 { color:#a1a1aa !important; }
           .rpt-tight-grid { gap:0.6rem !important; }
           .rpt-tight-mb { margin-bottom:0.75rem !important; }
         }
@@ -463,7 +478,7 @@ export default function LeadershipReport({ analysis }) {
         </div>
 
         {/* ═══ PAGE 2 — EXECUTIVE SUMMARY ════════════════════════════════════ */}
-        <Page breakBefore className="rpt-page-4">
+        <Page breakBefore>
           <PageHeader number={2} title="Executive Summary" />
 
           <div className="grid grid-cols-3 gap-5 mb-5">
@@ -687,7 +702,13 @@ export default function LeadershipReport({ analysis }) {
 
           <div className="grid grid-cols-2 gap-4 rpt-tight-grid">
             {sorted.map((comp, idx) => {
-              const levelColors = { Expert:"text-white", Advanced:"text-zinc-300", Developing:"text-zinc-400", Foundational:"text-zinc-500" };
+              const levelColors = {
+                Advanced: "text-white",
+                Strong: "text-zinc-300",
+                Developing: "text-zinc-400",
+                Emerging: "text-zinc-500",
+                Foundational: "text-zinc-500",
+              };
               const deepDive = analysis.deepDive?.[comp.name] || analysis.competencies.find(c => c.name === comp.name)?.deepDive || null;
               const actions = analysis.competencies.find(c => c.name === comp.name)?.quickWins ||
                 (comp.level === "Expert" || comp.level === "Advanced"
@@ -1474,16 +1495,11 @@ export default function LeadershipReport({ analysis }) {
             {/* Stakeholder Playbook */}
             <div className="rpt-no-break">
               <SubHeader>Stakeholder Playbook</SubHeader>
-              <div className="space-y-3">
-                {(analysis.stakeholderPlaybook || [
-                  { stakeholder: "Your Manager", approach: "Lead with outcomes, not activity. Bring solutions. Surface issues early with a proposed path forward." },
-                  { stakeholder: "Peer Leaders", approach: "Find shared interests. Offer your help before asking for theirs. Invest in their wins to build cross-functional trust." },
-                  { stakeholder: "Your Team", approach: "Communicate context, not just tasks. Create psychological safety. Celebrate effort, not just outcomes." },
-                  { stakeholder: "Senior Executives", approach: "Be concise. Frame in business impact. Know their priorities and connect your work to them explicitly." },
-                ]).map((item, i) => (
+              <div className="grid grid-cols-2 gap-3">
+                {stakeholderPlaybookCards.map((item, i) => (
                   <SectionCard key={i} className="p-3 rpt-card">
-                    <div className="text-[9px] font-semibold text-zinc-300 mb-0.5">{item.stakeholder}</div>
-                    <p className="text-[9px] text-zinc-500 leading-relaxed">{item.approach}</p>
+                    <div className="text-[9px] font-semibold text-zinc-300 mb-1">{item.title}</div>
+                    <p className="text-[9px] text-zinc-500 leading-relaxed">{item.detail}</p>
                   </SectionCard>
                 ))}
               </div>
@@ -1544,6 +1560,19 @@ export default function LeadershipReport({ analysis }) {
               </SectionCard>
             ))}
           </div>
+          <SectionCard className="p-4 rpt-card rpt-no-break mt-4">
+            <div className="text-[8px] font-mono text-zinc-700 uppercase tracking-widest mb-2">Relationship signal checks</div>
+            <div className="grid grid-cols-4 gap-3">
+              {[
+                "Do stakeholders hear from you before they need to ask?",
+                "Can your manager explain your team's work in business terms?",
+                "Do peers see you as easy to partner with under pressure?",
+                "Does your team know what good looks like this week?",
+              ].map((item) => (
+                <p key={item} className="text-[8px] text-zinc-500 leading-relaxed">{item}</p>
+              ))}
+            </div>
+          </SectionCard>
         </Page>
 
         {/* ═══ PAGE 14 — EVOLUTION PATH ═══════════════════════════════════════ */}
