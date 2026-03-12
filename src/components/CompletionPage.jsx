@@ -8,16 +8,16 @@ import CalendlyModal from "./CalendlyModal";
 
 // ─── Console log steps ────────────────────────────────────────────────────────
 const STEPS = [
-  { id: 0, label: "INITIALIZING ANALYSIS PROTOCOL",         duration: 520 },
-  { id: 1, label: "PARSING 12 ASSESSMENT RESPONSES",        duration: 700 },
-  { id: 2, label: "MAPPING LEADERSHIP ARCHETYPE",           duration: 820 },
-  { id: 3, label: "CROSS-REFERENCING MANAGEMENT PATTERNS",  duration: 900 },
-  { id: 4, label: "IDENTIFYING DEVELOPMENT GAPS",           duration: 760 },
-  { id: 5, label: "CALIBRATING GROWTH TRAJECTORY",          duration: 820 },
-  { id: 6, label: "BUILDING PERSONALISED ACTION FRAMEWORK", duration: 880 },
-  { id: 7, label: "SCORING 5 LEADERSHIP DIMENSIONS",        duration: 720 },
-  { id: 8, label: "GENERATING STRATEGIC ROADMAP",           duration: 920 },
-  { id: 9, label: "COMPILING LONG-FORM PDF REPORT",         duration: 1200 },
+  { id: 0, label: "INITIALIZING ANALYSIS PROTOCOL",         duration: 1040 },
+  { id: 1, label: "PARSING 12 ASSESSMENT RESPONSES",        duration: 1400 },
+  { id: 2, label: "MAPPING LEADERSHIP ARCHETYPE",           duration: 1640 },
+  { id: 3, label: "CROSS-REFERENCING MANAGEMENT PATTERNS",  duration: 1800 },
+  { id: 4, label: "IDENTIFYING DEVELOPMENT GAPS",           duration: 1520 },
+  { id: 5, label: "CALIBRATING GROWTH TRAJECTORY",          duration: 1640 },
+  { id: 6, label: "BUILDING PERSONALISED ACTION FRAMEWORK", duration: 1760 },
+  { id: 7, label: "SCORING 5 LEADERSHIP DIMENSIONS",        duration: 1440 },
+  { id: 8, label: "GENERATING STRATEGIC ROADMAP",           duration: 1840 },
+  { id: 9, label: "COMPILING LONG-FORM PDF REPORT",         duration: 2400 },
 ];
 
 function Cursor() {
@@ -81,6 +81,7 @@ function MissionControlConsole({ onComplete, answers }) {
   const [progress, setProgress]         = useState(0);
   const [elapsed, setElapsed]           = useState(0);  // seconds since start
   const elapsedTimer = useRef(null);
+  const consoleScrollRef = useRef(null);
 
   // Refs so the animation effect never needs to re-run when API resolves
   const apiDoneRef          = useRef(false);
@@ -112,8 +113,8 @@ function MissionControlConsole({ onComplete, answers }) {
   useEffect(() => {
     let stepIdx = 0;
     const progStart = Date.now();
-    const PREP_PROGRESS_CAP = 94;
-    const CURVE_MS = 8500;
+    const PREP_PROGRESS_CAP = 90;
+    const CURVE_MS = 17000;
 
     // Continuously ease progress toward a moving target. This avoids
     // sprinting into the 90s too early and then visibly stalling there.
@@ -123,7 +124,7 @@ function MissionControlConsole({ onComplete, answers }) {
       const target = isReadyToFinalize
         ? 100
         : PREP_PROGRESS_CAP * (1 - Math.exp(-totalElapsed / CURVE_MS));
-      const smoothing = isReadyToFinalize ? 0.22 : 0.12;
+      const smoothing = isReadyToFinalize ? 0.18 : 0.08;
 
       progressValueRef.current += (target - progressValueRef.current) * smoothing;
 
@@ -173,6 +174,20 @@ function MissionControlConsole({ onComplete, answers }) {
       clearInterval(elapsedTimer.current);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const container = consoleScrollRef.current;
+    if (!container) return undefined;
+
+    const frame = window.requestAnimationFrame(() => {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [visibleSteps, runningStep]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col relative overflow-hidden">
@@ -230,7 +245,10 @@ function MissionControlConsole({ onComplete, answers }) {
                 careera@mission-control:~$ ./build-leadership-report.sh
               </span>
             </div>
-            <div className="h-[min(320px,40vh)] overflow-y-auto p-5 sm:p-6 space-y-1 scrollbar-none">
+            <div
+              ref={consoleScrollRef}
+              className="h-[min(320px,40vh)] overflow-y-auto p-5 sm:p-6 space-y-1 scrollbar-none"
+            >
               {STEPS.map((s, idx) => {
                 const isVisible = visibleSteps.includes(idx);
                 const status = !isVisible
@@ -304,14 +322,50 @@ function ReportReady({ analysis, reportData }) {
     if (!reportData?.pdf) return;
     setIsDownloading(true);
     try {
-      const link = document.createElement("a");
-      link.href = reportData.pdf;
-      link.download = reportData.filename || "Careera-Leadership-Report.pdf";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const pdfSource = reportData.pdf;
+      const fileName = reportData.filename || "Careera-Leadership-Report.pdf";
+      const isDataUrl = pdfSource.startsWith("data:");
+
+      const isIOS =
+        /iPad|iPhone|iPod/.test(window.navigator.userAgent) ||
+        (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
+      const isSafari =
+        /^((?!chrome|android).)*safari/i.test(window.navigator.userAgent);
+
+      let objectUrl = pdfSource;
+
+      if (isDataUrl) {
+        const [meta, base64Data = ""] = pdfSource.split(",", 2);
+        const mimeType = meta.match(/^data:(.*?);base64$/)?.[1] || "application/pdf";
+        const binary = window.atob(base64Data);
+        const bytes = new Uint8Array(binary.length);
+
+        for (let i = 0; i < binary.length; i += 1) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+
+        objectUrl = window.URL.createObjectURL(new Blob([bytes], { type: mimeType }));
+      }
+
+      if (isIOS || isSafari) {
+        const opened = window.open(objectUrl, "_blank", "noopener,noreferrer");
+        if (!opened) {
+          window.location.href = objectUrl;
+        }
+      } else {
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      if (objectUrl !== pdfSource) {
+        window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60000);
+      }
     } finally {
-      window.setTimeout(() => setIsDownloading(false), 500);
+      window.setTimeout(() => setIsDownloading(false), 800);
     }
   }, [reportData]);
 
