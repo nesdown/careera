@@ -83,11 +83,14 @@ function MissionControlConsole({ onComplete, answers }) {
   const elapsedTimer = useRef(null);
 
   // Refs so the animation effect never needs to re-run when API resolves
-  const apiDoneRef    = useRef(false);
-  const reportDataRef = useRef(null);
-  const onCompleteRef = useRef(onComplete);
-  const stepTimer     = useRef(null);
-  const progressTimer = useRef(null);
+  const apiDoneRef          = useRef(false);
+  const reportDataRef       = useRef(null);
+  const onCompleteRef       = useRef(onComplete);
+  const stepTimer           = useRef(null);
+  const progressTimer       = useRef(null);
+  const progressValueRef    = useRef(0);
+  const finalStepVisibleRef = useRef(false);
+  const hasCompletedRef     = useRef(false);
 
   // Keep onComplete ref current
   useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
@@ -108,27 +111,40 @@ function MissionControlConsole({ onComplete, answers }) {
   // Animation loop — runs exactly once
   useEffect(() => {
     let stepIdx = 0;
-    // Total time the step animation takes (all steps except the last waiting one)
-    const animDuration = STEPS.slice(0, -1).reduce((a, s) => a + s.duration, 0);
     const progStart = Date.now();
 
-    // Two-phase progress:
-    //   Phase 1 (0 → animDuration ms):  linear 0 % → 92 %
-    //   Phase 2 (waiting for API):       asymptotic crawl 92 % → 99 %
-    //   On API complete:                 snap to 100 %
+    // Continuously ease progress toward a moving target. This avoids
+    // sprinting to a hard threshold like 92% and then visibly stalling.
     progressTimer.current = setInterval(() => {
-      const elapsed = Date.now() - progStart;
-      if (elapsed <= animDuration) {
-        // Linear ramp during the step animation
-        setProgress(Math.round((elapsed / animDuration) * 92));
-      } else {
-        // Asymptotic: 99 - 7·e^(-0.03·waitSeconds)
-        // Reaches ~93 % after 5 s, ~95 % after 11 s, ~98 % after 30 s — never hits 99 %
-        const waitSecs = (elapsed - animDuration) / 1000;
-        const extra = 7 * (1 - Math.exp(-0.03 * waitSecs));
-        setProgress(Math.min(99, Math.round(92 + extra)));
+      const totalElapsed = Date.now() - progStart;
+      const isReadyToFinalize = apiDoneRef.current && finalStepVisibleRef.current;
+      const target = isReadyToFinalize
+        ? 100
+        : 98 * (1 - Math.exp(-totalElapsed / 3600));
+      const smoothing = isReadyToFinalize ? 0.22 : 0.12;
+
+      progressValueRef.current += (target - progressValueRef.current) * smoothing;
+
+      if (!isReadyToFinalize) {
+        progressValueRef.current = Math.min(progressValueRef.current, 98.8);
       }
-    }, 100);
+
+      const nextProgress = isReadyToFinalize && progressValueRef.current > 99.95
+        ? 100
+        : progressValueRef.current;
+
+      setProgress(nextProgress);
+
+      if (isReadyToFinalize && nextProgress >= 99.4 && !hasCompletedRef.current) {
+        hasCompletedRef.current = true;
+        clearInterval(progressTimer.current);
+        setRunningStep(-1);
+        setTimeout(() => {
+          setProgress(100);
+          onCompleteRef.current(reportDataRef.current);
+        }, 220);
+      }
+    }, 50);
 
     const runStep = () => {
       if (stepIdx >= STEPS.length) return;
@@ -137,18 +153,7 @@ function MissionControlConsole({ onComplete, answers }) {
       setRunningStep(stepIdx);
 
       if (stepIdx === STEPS.length - 1) {
-        // Last step: poll until API done, then complete
-        const waitForApi = () => {
-          if (apiDoneRef.current) {
-            clearInterval(progressTimer.current);
-            setRunningStep(-1);
-            setProgress(100);
-            stepTimer.current = setTimeout(() => onCompleteRef.current(reportDataRef.current), 500);
-          } else {
-            stepTimer.current = setTimeout(waitForApi, 200);
-          }
-        };
-        stepTimer.current = setTimeout(waitForApi, step.duration);
+        finalStepVisibleRef.current = true;
       } else {
         stepTimer.current = setTimeout(() => { stepIdx++; runStep(); }, step.duration);
       }
@@ -248,7 +253,7 @@ function MissionControlConsole({ onComplete, answers }) {
             <div className="px-5 sm:px-6 pb-5">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-mono text-zinc-600">ANALYSIS PROGRESS</span>
-                <span className="text-[10px] font-mono text-zinc-400">{progress}%</span>
+                <span className="text-[10px] font-mono text-zinc-400">{Math.round(progress)}%</span>
               </div>
               <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
                 <motion.div
@@ -260,9 +265,9 @@ function MissionControlConsole({ onComplete, answers }) {
               <div className="mt-3 text-[9px] font-mono text-zinc-700">
                 {progress === 100
                   ? "✓ REPORT COMPILED — READY"
-                  : progress >= 92
+                  : runningStep === STEPS.length - 1
                   ? `Finalising AI analysis... ${elapsed}s`
-                  : `Analysing responses — ${Math.max(0, Math.round(45 - elapsed))}s remaining`}
+                  : `Analysing responses... ${elapsed}s`}
               </div>
             </div>
           </motion.div>
