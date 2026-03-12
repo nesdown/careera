@@ -594,6 +594,58 @@ function renderContent(doc, analysis) {
     'Development conversations completed',
     'Strategic priorities actively advanced',
   ]);
+  const leadingIndicators = safeArray(analysis.metricsDashboard?.leadingIndicators, [
+    'Delegate at least 2 recurring decisions with explicit owners by week 2',
+    'Reserve 3 hours per week for strategic thinking and cross-functional preparation',
+    'Send 1 executive-style update per week with context, decision, and impact',
+    'Run 2 coaching-focused 1:1s per week instead of status-only conversations',
+    'Raise stakeholder confidence pulse to 4/5 over the next month',
+  ]);
+  const laggingIndicators = safeArray(analysis.metricsDashboard?.laggingIndicators, [
+    'Reduce direct tactical involvement by 20% within 30 days',
+    'Improve team ownership of recurring workflows in at least 3 areas within 45 days',
+    'Secure positive feedback from 2 senior stakeholders on strategic clarity within 60 days',
+    'Document a repeatable team operating model and escalation path within 75 days',
+    'Step away from one workflow for a day without quality dropping by day 90',
+  ]);
+  const riskRegister = safeArray(analysis.riskRegister, [
+    { risk: 'Delegation remains task-based instead of ownership-based', impact: 'High', mitigation: 'Define outcome, decision rights, and escalation path before handoff.', owner: 'You + direct report' },
+    { risk: 'Stakeholders still see the team as operational not strategic', impact: 'High', mitigation: 'Lead updates with business context and impact instead of task lists.', owner: 'You' },
+    { risk: 'Tactical work crowds out leadership leverage time', impact: 'Medium', mitigation: 'Protect one recurring strategic block and redesign low-value meetings.', owner: 'You' },
+    { risk: 'High standards unintentionally reduce autonomy', impact: 'Medium', mitigation: 'Make decision boundaries explicit and reward independent judgment publicly.', owner: 'You + team leads' },
+  ]);
+  const talentPlan = analysis.talentPlan || {};
+  const accelerateItems = safeArray(talentPlan.accelerate, [
+    'People already showing reliable judgment under ambiguity',
+    'Team members ready for fuller ownership with one level more coaching',
+    'Behaviors that turn execution wins into system improvements',
+    'Cross-functional collaborators who can become influence partners',
+  ]);
+  const stabilizeItems = safeArray(talentPlan.stabilize, [
+    'Individuals who still need tighter decision boundaries',
+    'Behaviors that create rework because expectations stay implied',
+    'Meetings where accountability is unclear after the conversation ends',
+    'Workflows that still depend too heavily on your review',
+  ]);
+  const delegateItems = safeArray(talentPlan.delegate, [
+    'Recurring status collection and routine follow-up tasks',
+    'One operational workflow that a high-potential report can fully own',
+    'Preparation work for leadership updates once the structure is defined',
+    'Low-complexity decisions bounded by clear rules',
+  ]);
+  const meetingBlueprint = analysis.meetingBlueprint || {};
+  const benchmarkNarrative = safeText(
+    analysis.benchmarkNarrative,
+    'Relative to peers, execution and accountability are likely to stand out as strengths, but the next edge comes from deeper delegation, sharper strategic framing, and more visible cross-functional influence. That combination is what separates respected senior leaders from simply dependable managers.'
+  );
+  const evolutionNarrative = safeText(
+    analysis.evolutionNarrative,
+    'The move from scaling manager to senior strategic leader is not mainly about working harder. It is about changing what only you can own: direction, trade-offs, system design, talent decisions, and stakeholder confidence. Growth happens when capacity is freed from direct execution and reinvested into leverage.'
+  );
+  const finalReflectionText = safeText(
+    analysis.finalReflection,
+    'The leaders who earn durable respect are not the ones who become indispensable through effort. They become respected because they build clarity, raise standards, develop stronger operators around them, and make difficult decisions legible to others. Use this report to redesign your operating system until your impact compounds even when you are not personally holding every thread.'
+  );
 
   const dailyCadence = safeArray(analysis.operatingCadence?.daily, [
     '15-minute priorities check',
@@ -1123,6 +1175,16 @@ function renderContent(doc, analysis) {
     lineGap: 2,
   });
   y += compareSummaryH + 18;
+  const benchmarkNarrativeH = measure(doc, benchmarkNarrative, CONTENT_W - 36, 9.2) + 36;
+  panel(doc, MARGIN, y, CONTENT_W, benchmarkNarrativeH, C.panel, C.stroke, 14);
+  writeLabel(doc, 'Benchmark Interpretation', MARGIN + 18, y + 14, C.faint);
+  writeText(doc, benchmarkNarrative, MARGIN + 18, y + 28, {
+    width: CONTENT_W - 36,
+    size: 9.2,
+    color: C.soft,
+    lineGap: 2.3,
+  });
+  y += benchmarkNarrativeH + 18;
   y = drawDivider(doc, y);
 
   // Page 9
@@ -1152,6 +1214,16 @@ function renderContent(doc, analysis) {
     lineGap: 2.4,
   });
   y += shiftH + 18;
+  const evolutionNarrativeH = measure(doc, evolutionNarrative, CONTENT_W - 36, 9.2) + 36;
+  panel(doc, MARGIN, y, CONTENT_W, evolutionNarrativeH, C.panel, C.stroke, 14);
+  writeLabel(doc, 'Stage Shift Narrative', MARGIN + 18, y + 14, C.faint);
+  writeText(doc, evolutionNarrative, MARGIN + 18, y + 28, {
+    width: CONTENT_W - 36,
+    size: 9.2,
+    color: C.soft,
+    lineGap: 2.3,
+  });
+  y += evolutionNarrativeH + 18;
   y = drawDivider(doc, y);
 
   // Page 10
@@ -1203,6 +1275,16 @@ function renderContent(doc, analysis) {
     lineGap: 2.4,
   });
   y += scriptH + 16;
+  const finalReflectionH = measure(doc, finalReflectionText, CONTENT_W - 36, 9.4) + 38;
+  panel(doc, MARGIN, y, CONTENT_W, finalReflectionH, '#0f1014', C.strokeSoft, 14);
+  writeLabel(doc, 'Final Reflection', MARGIN + 18, y + 14, C.faint);
+  writeText(doc, finalReflectionText, MARGIN + 18, y + 28, {
+    width: CONTENT_W - 36,
+    size: 9.4,
+    color: C.soft,
+    lineGap: 2.3,
+  });
+  y += finalReflectionH + 18;
 
   // Page 11
   y = pageHeader(doc, 11, 'Mission Control Dashboard', 'Operating rhythms and scorecards that keep your growth visible after the assessment.', y);
@@ -1260,6 +1342,29 @@ function renderContent(doc, analysis) {
     lineGap: 2,
   });
   y += dashboardH + 18;
+  const indicatorColW = (CONTENT_W - 14) / 2;
+  const leadingH = 42 + leadingIndicators.reduce((sum, item) => sum + measure(doc, item, indicatorColW - 28, 8.2) + 6, 0);
+  const laggingH = 42 + laggingIndicators.reduce((sum, item) => sum + measure(doc, item, indicatorColW - 28, 8.2) + 6, 0);
+  const indicatorsH = Math.max(leadingH, laggingH);
+  panel(doc, MARGIN, y, indicatorColW, indicatorsH, '#0d100d', C.stroke, 14);
+  panel(doc, MARGIN + indicatorColW + 14, y, indicatorColW, indicatorsH, '#101014', C.stroke, 14);
+  writeLabel(doc, 'Leading Indicators', MARGIN + 16, y + 14, C.green);
+  writeLabel(doc, 'Lagging Indicators', MARGIN + indicatorColW + 30, y + 14, C.blue);
+  drawBulletList(doc, leadingIndicators, MARGIN + 16, y + 28, indicatorColW - 28, {
+    bullet: '•',
+    size: 8.2,
+    color: C.soft,
+    bulletColor: C.green,
+    gap: 5,
+  });
+  drawBulletList(doc, laggingIndicators, MARGIN + indicatorColW + 30, y + 28, indicatorColW - 28, {
+    bullet: '•',
+    size: 8.2,
+    color: C.soft,
+    bulletColor: C.blue,
+    gap: 5,
+  });
+  y += indicatorsH + 18;
   y = drawDivider(doc, y);
 
   // Page 12
@@ -1370,6 +1475,110 @@ function renderContent(doc, analysis) {
     lineGap: 2.4,
   });
   y += outcomeH + 24;
+
+  // Page 14
+  y = pageHeader(doc, 14, 'Risk Register & Mitigation Plan', 'The likely failure modes that could slow your progression and how to counter them early.', y);
+  const riskHeights = riskRegister.map((item) => 56 + measure(doc, safeText(item.risk), CONTENT_W - 112, 8.8) + measure(doc, safeText(item.mitigation), CONTENT_W - 112, 8.4) + 6);
+  riskRegister.forEach((item, index) => {
+    const riskH = riskHeights[index];
+    const impactColor = item.impact === 'High' ? C.red : item.impact === 'Low' ? C.blue : C.amber;
+    panel(doc, MARGIN, y, CONTENT_W, riskH, C.panel, C.stroke, 14);
+    panel(doc, MARGIN + 14, y + 14, 58, 28, '#101014', impactColor, 10);
+    writeLabel(doc, item.impact || 'Medium', MARGIN + 27, y + 22, impactColor);
+    writeLabel(doc, `Owner: ${safeText(item.owner, 'You')}`, PAGE_W - MARGIN - 108, y + 18, C.faint);
+    writeText(doc, safeText(item.risk), MARGIN + 86, y + 16, {
+      width: CONTENT_W - 100,
+      size: 8.8,
+      font: 'Helvetica-Bold',
+      color: C.text,
+      lineGap: 2,
+    });
+    writeLabel(doc, 'Mitigation', MARGIN + 86, y + 36, C.green);
+    writeText(doc, safeText(item.mitigation), MARGIN + 86, y + 48, {
+      width: CONTENT_W - 100,
+      size: 8.4,
+      color: C.soft,
+      lineGap: 2,
+    });
+    y += riskH + 12;
+  });
+  y = drawDivider(doc, y);
+
+  // Page 15
+  y = pageHeader(doc, 15, 'Talent Leverage Plan', 'Where to accelerate, stabilize, and delegate so your role grows through people rather than around them.', y);
+  const talentColW = (CONTENT_W - 24) / 3;
+  const talentCols = [
+    { label: 'Accelerate', items: accelerateItems, color: C.green, fill: '#0d100d' },
+    { label: 'Stabilize', items: stabilizeItems, color: C.amber, fill: '#13110b' },
+    { label: 'Delegate', items: delegateItems, color: C.blue, fill: '#101014' },
+  ];
+  const talentH = Math.max(...talentCols.map((col) => 42 + col.items.reduce((sum, item) => sum + measure(doc, item, talentColW - 28, 8.2) + 6, 0)));
+  talentCols.forEach((col, index) => {
+    const x = MARGIN + index * (talentColW + 12);
+    panel(doc, x, y, talentColW, talentH, col.fill, C.stroke, 14);
+    writeLabel(doc, col.label, x + 14, y + 14, col.color);
+    drawBulletList(doc, col.items, x + 14, y + 28, talentColW - 28, {
+      bullet: '•',
+      size: 8.2,
+      color: C.soft,
+      bulletColor: col.color,
+      gap: 5,
+    });
+  });
+  y += talentH + 18;
+  y = drawDivider(doc, y);
+
+  // Page 16
+  y = pageHeader(doc, 16, 'Meeting Blueprints', 'Meeting structures that reinforce leverage, alignment, and strategic visibility.', y);
+  const meetingCards = [
+    {
+      label: 'Team',
+      color: C.green,
+      purpose: safeText(meetingBlueprint.team?.purpose, 'Create clarity on ownership, priorities, and blockers without turning the meeting into a status recital.'),
+      cadence: safeText(meetingBlueprint.team?.cadence, 'Weekly'),
+      agenda: safeArray(meetingBlueprint.team?.agenda, ['Review top priorities and ownership shifts', 'Surface blockers and decision needs', 'Coach one capability that matters this week', 'Confirm next actions and owners']),
+    },
+    {
+      label: 'Leadership',
+      color: C.blue,
+      purpose: safeText(meetingBlueprint.leadership?.purpose, 'Translate team progress into strategic signal, resourcing needs, and business impact for leaders above you.'),
+      cadence: safeText(meetingBlueprint.leadership?.cadence, 'Bi-weekly'),
+      agenda: safeArray(meetingBlueprint.leadership?.agenda, ['Context: what shifted and why it matters', 'Decisions made and trade-offs taken', 'Risks, support needed, and business impact', 'Forward view for the next 2-4 weeks']),
+    },
+    {
+      label: 'Stakeholder',
+      color: C.purple,
+      purpose: safeText(meetingBlueprint.stakeholder?.purpose, 'Preserve alignment, reduce surprises, and maintain trust across functions that influence your team’s outcomes.'),
+      cadence: safeText(meetingBlueprint.stakeholder?.cadence, 'Monthly'),
+      agenda: safeArray(meetingBlueprint.stakeholder?.agenda, ['Review shared priorities and dependencies', 'Clarify ownership across boundaries', 'Resolve one emerging friction point', 'Align on next actions and communication rhythm']),
+    },
+  ];
+  meetingCards.forEach((card) => {
+    const cardH = 64 + measure(doc, card.purpose, CONTENT_W - 42, 8.5) + card.agenda.reduce((sum, item) => sum + measure(doc, item, CONTENT_W - 54, 8.2) + 4, 0);
+    panel(doc, MARGIN, y, CONTENT_W, cardH, C.panel, C.stroke, 14);
+    writeLabel(doc, `${card.label} Meeting`, MARGIN + 18, y + 14, card.color);
+    writeText(doc, `Cadence: ${card.cadence}`, PAGE_W - MARGIN - 120, y + 14, {
+      width: 102,
+      size: 8,
+      color: C.soft,
+      align: 'right',
+    });
+    const purposeEnd = writeText(doc, card.purpose, MARGIN + 18, y + 28, {
+      width: CONTENT_W - 36,
+      size: 8.5,
+      color: C.soft,
+      lineGap: 2,
+    });
+    writeLabel(doc, 'Agenda', MARGIN + 18, purposeEnd + 4, card.color);
+    drawBulletList(doc, card.agenda, MARGIN + 18, purposeEnd + 16, CONTENT_W - 36, {
+      bullet: '•',
+      size: 8.2,
+      color: C.muted,
+      bulletColor: card.color,
+      gap: 4,
+    });
+    y += cardH + 12;
+  });
 
   doc.save().rect(MARGIN, y, CONTENT_W, 0.75).fill(C.stroke).restore();
   y += 10;

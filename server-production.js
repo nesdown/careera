@@ -104,6 +104,12 @@ function normalizeAnalysis(raw, seed) {
     return trimmed;
   };
 
+  const sanitizeList = (value, fallback, limit = fallback.length) => (
+    Array.isArray(value) && value.length
+      ? value.slice(0, limit).map((item) => sanitize(item, '')).filter(Boolean)
+      : fallback
+  );
+
   return {
     leadershipScore,
     leadershipStage: sanitize(raw?.leadershipStage, 'Scaling Manager → Strategic Leader'),
@@ -129,89 +135,96 @@ function normalizeAnalysis(raw, seed) {
         title: sanitize(a?.title, `Growth Area ${idx + 1}`),
         description: sanitize(a?.description, 'Build a repeatable system, define clearer expectations, and measure outcomes with weekly leading indicators.'),
         actionSteps: Array.isArray(a?.actionSteps) && a.actionSteps.length
-          ? a.actionSteps.slice(0, 4).map(s => sanitize(s, '')).filter(Boolean)
-          : ['Define clear success metrics', 'Create a weekly tracking mechanism', 'Schedule accountability check-ins'],
+          ? a.actionSteps.slice(0, 6).map(s => sanitize(s, '')).filter(Boolean)
+          : ['Define clear success metrics', 'Create a weekly tracking mechanism', 'Schedule accountability check-ins', 'Review results with explicit ownership language'],
       }))
       : [
-        { title: 'Delegation Depth', description: 'Move from task delegation to ownership delegation with clear decision rights, milestones, and success criteria.', actionSteps: ['Map all recurring tasks you handle personally', 'Identify 3 tasks to delegate with full ownership', 'Create decision-rights framework for each delegated area'] },
-        { title: 'Strategic Communication', description: 'Translate team execution into business impact using concise executive narratives and clearer prioritization trade-offs.', actionSteps: ['Draft weekly executive updates using context-decision-impact format', 'Practice elevator pitch for team value proposition', 'Build stakeholder communication calendar'] },
-        { title: 'Systems Thinking', description: 'Replace heroics with operating rhythms: planning cadence, escalation rules, and accountability loops.', actionSteps: ['Document your team operating model on one page', 'Define escalation thresholds and response protocols', 'Create a team decision log for transparency'] },
+        { title: 'Delegation Depth', description: 'Move from task delegation to ownership delegation with clear decision rights, milestones, and success criteria.', actionSteps: ['Map all recurring tasks you handle personally', 'Identify 3 tasks to delegate with full ownership', 'Create decision-rights framework for each delegated area', 'Review outcomes without reclaiming responsibility'] },
+        { title: 'Strategic Communication', description: 'Translate team execution into business impact using concise executive narratives and clearer prioritization trade-offs.', actionSteps: ['Draft weekly executive updates using context-decision-impact format', 'Practice elevator pitch for team value proposition', 'Build stakeholder communication calendar', 'Tie every update to one business metric or risk'] },
+        { title: 'Systems Thinking', description: 'Replace heroics with operating rhythms: planning cadence, escalation rules, and accountability loops.', actionSteps: ['Document your team operating model on one page', 'Define escalation thresholds and response protocols', 'Create a team decision log for transparency', 'Introduce one recurring cross-functional operating review'] },
       ],
     roadmap: {
       month1: {
         title: sanitize(raw?.roadmap?.month1?.title, 'Stabilize Your Operating System'),
         theme: sanitize(raw?.roadmap?.month1?.theme, 'Foundation & Awareness'),
         actions: Array.isArray(raw?.roadmap?.month1?.actions) && raw.roadmap.month1.actions.length
-          ? raw.roadmap.month1.actions.slice(0, 5).map((a) => sanitize(a, '')).filter(Boolean)
-          : ['Audit your calendar and reclaim at least 4 hours/week from low-leverage work', 'Redesign 1:1s around growth, not status updates', 'Create a delegation map for the next 30 days', 'Define your top 3 leadership priorities for the quarter'],
+          ? raw.roadmap.month1.actions.slice(0, 6).map((a) => sanitize(a, '')).filter(Boolean)
+          : ['Audit your calendar and reclaim at least 4 hours/week from low-leverage work', 'Redesign 1:1s around growth, not status updates', 'Create a delegation map for the next 30 days', 'Define your top 3 leadership priorities for the quarter', 'Document decision rights for your team', 'Start a weekly strategic reflection note'],
       },
       month2: {
         title: sanitize(raw?.roadmap?.month2?.title, 'Expand Strategic Influence'),
         theme: sanitize(raw?.roadmap?.month2?.theme, 'Strategic Expansion'),
         actions: Array.isArray(raw?.roadmap?.month2?.actions) && raw.roadmap.month2.actions.length
-          ? raw.roadmap.month2.actions.slice(0, 5).map((a) => sanitize(a, '')).filter(Boolean)
-          : ['Build stakeholder map with communication cadence and decision expectations', 'Run one strategic review that ties team metrics to company outcomes', 'Practice executive updates using context → decision → impact structure', 'Initiate one cross-functional collaboration'],
+          ? raw.roadmap.month2.actions.slice(0, 6).map((a) => sanitize(a, '')).filter(Boolean)
+          : ['Build stakeholder map with communication cadence and decision expectations', 'Run one strategic review that ties team metrics to company outcomes', 'Practice executive updates using context → decision → impact structure', 'Initiate one cross-functional collaboration', 'Ask for feedback on your executive presence', 'Create a narrative around your team’s business value'],
       },
       month3: {
         title: sanitize(raw?.roadmap?.month3?.title, 'Scale Through People'),
         theme: sanitize(raw?.roadmap?.month3?.theme, 'Multiplication & Legacy'),
         actions: Array.isArray(raw?.roadmap?.month3?.actions) && raw.roadmap.month3.actions.length
-          ? raw.roadmap.month3.actions.slice(0, 5).map((a) => sanitize(a, '')).filter(Boolean)
-          : ['Launch succession plans for key responsibilities', 'Promote ownership culture with role scorecards and weekly retros', 'Codify your team operating playbook for repeatability', 'Measure leadership impact through team autonomy metrics'],
+          ? raw.roadmap.month3.actions.slice(0, 6).map((a) => sanitize(a, '')).filter(Boolean)
+          : ['Launch succession plans for key responsibilities', 'Promote ownership culture with role scorecards and weekly retros', 'Codify your team operating playbook for repeatability', 'Measure leadership impact through team autonomy metrics', 'Delegate one strategic initiative completely', 'Publish a concise leadership philosophy to your team'],
       },
     },
     keyInsight: sanitize(
       raw?.keyInsight,
       'Your next level will come from leverage, not effort: scale your impact through systems, clarity, and people ownership.'
     ),
-    blindSpots: Array.isArray(raw?.blindSpots) && raw.blindSpots.length
-      ? raw.blindSpots.slice(0, 5).map((s) => sanitize(s, '')).filter(Boolean)
-      : [
+    blindSpots: sanitizeList(raw?.blindSpots, [
         'You may be over-indexing on execution quality at the cost of strategic airtime.',
         'Escalations can become person-dependent when decision rights are not explicit.',
         'High standards may unintentionally reduce delegation depth if outcomes are not clearly framed.',
         'Stakeholder updates may be too operational and not tied tightly enough to business outcomes.',
         'Team members may be waiting for your approval on decisions they could own.',
-      ],
-    strengthLevers: Array.isArray(raw?.strengthLevers) && raw.strengthLevers.length
-      ? raw.strengthLevers.slice(0, 5).map((s) => sanitize(s, '')).filter(Boolean)
-      : [
+        'Your calendar may still reflect operator priorities more than leader priorities.',
+      ], 6),
+    strengthLevers: sanitizeList(raw?.strengthLevers, [
         'Use your accountability mindset to build a consistent team operating cadence.',
         'Turn execution discipline into measurable team-level KPIs and decision dashboards.',
         'Translate team wins into leadership narratives for executives and cross-functional peers.',
         'Apply coaching consistency to raise autonomy and reduce tactical dependency.',
         'Leverage your builder instinct to create scalable processes others can own.',
-      ],
-    stakeholderPlaybook: Array.isArray(raw?.stakeholderPlaybook) && raw.stakeholderPlaybook.length
-      ? raw.stakeholderPlaybook.slice(0, 5).map((s) => sanitize(s, '')).filter(Boolean)
-      : [
+        'Use trust earned through delivery to ask for broader strategic scope.',
+      ], 6),
+    plateauRisk: sanitize(
+      raw?.plateauRisk,
+      'The biggest risk is remaining the organisation’s most reliable problem-solver instead of becoming the leader who creates repeatable leverage through other people, better systems, and stronger cross-functional clarity.'
+    ),
+    stakeholderPlaybook: sanitizeList(raw?.stakeholderPlaybook, [
         'Weekly: direct manager update with risks, decisions needed, and business impact.',
         'Bi-weekly: cross-functional sync to align priorities and unblock dependencies.',
         'Monthly: executive narrative highlighting outcomes vs. strategy goals.',
         'Quarterly: strategic review with skip-level to demonstrate readiness.',
         'Ad-hoc: escalation protocol with clear trigger thresholds and ownership.',
-      ],
-    kpis: Array.isArray(raw?.kpis) && raw.kpis.length
-      ? raw.kpis.slice(0, 6).map((s) => sanitize(s, '')).filter(Boolean)
-      : [
+        'Monthly: calibrate trust with one stakeholder who still sees you mainly as an operator.',
+      ], 6),
+    kpis: sanitizeList(raw?.kpis, [
         'Percent of decisions delegated with clear owner and deadline',
         'On-time delivery rate for committed team outcomes',
         '1:1 completion rate and growth-action follow-through',
         'Stakeholder confidence pulse (1-5) after weekly updates',
         'Share of calendar spent on strategy vs. tactical execution',
         'Number of team members taking on expanded responsibilities',
-      ],
+        'Percentage of updates framed in business-impact language',
+        'Cross-functional dependencies resolved without escalation',
+      ], 8),
     communicationScript: sanitize(
       raw?.communicationScript,
       'This month we shifted from reactive execution to clearer operating rhythms. We delegated two core workflows with defined ownership and saw faster decision cycles. Risks are now tracked with explicit thresholds and response owners. Our team velocity improved by focusing on fewer, higher-impact initiatives. Over the next four weeks, our focus is to increase cross-functional predictability, improve stakeholder visibility, and protect strategic time so the team can scale without leadership bottlenecks.'
+    ),
+    benchmarkNarrative: sanitize(
+      raw?.benchmarkNarrative,
+      'Relative to peers, your execution and accountability likely stand out as strengths, but your next edge will come from increasing delegation depth, strategic framing, and visible cross-functional influence. That combination is what tends to separate respected senior leaders from simply dependable managers.'
+    ),
+    evolutionNarrative: sanitize(
+      raw?.evolutionNarrative,
+      'The move from scaling manager to senior strategic leader is not mainly about working harder. It is about changing what only you can own: direction, trade-offs, system design, talent decisions, and stakeholder confidence. Your growth path depends on freeing capacity from direct execution and reinvesting it into leverage.'
     ),
     ninetyDayOutcome: sanitize(
       raw?.ninetyDayOutcome,
       'If you execute this plan consistently, your team will depend less on your direct intervention, your strategic visibility with senior leadership will increase measurably, and your readiness for the next leadership level will become demonstrable through concrete outcomes — not just effort. You will have a documented operating system, clear delegation framework, and a reputation as someone who develops people and delivers results simultaneously.'
     ),
-    firstWeekPlan: Array.isArray(raw?.firstWeekPlan) && raw.firstWeekPlan.length
-      ? raw.firstWeekPlan.slice(0, 7).map(s => sanitize(s, '')).filter(Boolean)
-      : [
+    firstWeekPlan: sanitizeList(raw?.firstWeekPlan, [
         'Block 90 minutes to define top 3 leadership priorities for this quarter',
         'Redesign one recurring meeting to focus on outcomes, not status',
         'Delegate one recurring task with explicit ownership criteria',
@@ -219,7 +232,108 @@ function normalizeAnalysis(raw, seed) {
         'Run one coaching-focused 1:1 centered on capability growth',
         'Create a simple KPI dashboard with 3 leading indicators',
         'Close the week with a 20-minute reflection: what only you can do next week',
+      ], 7),
+    finalReflection: sanitize(
+      raw?.finalReflection,
+      'The leaders who earn durable respect are not the ones who become indispensable through effort. They become respected because they build clarity, raise standards, develop stronger operators around them, and make difficult decisions legible to others. Use this report to redesign your operating system until your impact compounds even when you are not personally holding every thread.'
+    ),
+    metricsDashboard: {
+      leadingIndicators: sanitizeList(raw?.metricsDashboard?.leadingIndicators, [
+        'By week 2, delegate at least 2 recurring decisions with explicit owners',
+        'Reserve 3 hours per week for strategic thinking and cross-functional prep',
+        'Send 1 executive-style update per week with context, decision, and impact',
+        'Run 2 coaching-focused 1:1s per week instead of status-only conversations',
+        'Track stakeholder confidence weekly and raise the average to 4/5',
+      ], 5),
+      laggingIndicators: sanitizeList(raw?.metricsDashboard?.laggingIndicators, [
+        'Within 30 days, reduce direct involvement in tactical execution by 20%',
+        'Within 45 days, improve team ownership of recurring workflows in at least 3 areas',
+        'Within 60 days, secure positive feedback from 2 senior stakeholders on strategic clarity',
+        'Within 75 days, document a repeatable team operating model and escalation path',
+        'Within 90 days, be able to step away from one workflow without delivery quality dropping',
+      ], 5),
+    },
+    decisionMatrix: {
+      immediateWins: sanitizeList(raw?.decisionMatrix?.immediateWins, [
+        'Clarify decision ownership for one recurring workflow',
+        'Rewrite your weekly leadership update in business-impact language',
+        'Replace one status meeting with a coaching or unblock session',
+        'Document a simple escalation threshold for your team',
+        'Audit tasks you still own that could move to a direct report',
+      ], 5),
+      strategicBets: sanitizeList(raw?.decisionMatrix?.strategicBets, [
+        'Build a delegation framework with clear decision rights',
+        'Create a stakeholder communication calendar for the quarter',
+        'Redesign operating cadence around leading indicators',
+        'Develop a successor plan for one critical area',
+        'Formalize one cross-functional leverage loop that reduces friction',
+      ], 5),
+    },
+    riskRegister: Array.isArray(raw?.riskRegister) && raw.riskRegister.length
+      ? raw.riskRegister.slice(0, 4).map((risk, idx) => ({
+        risk: sanitize(risk?.risk, `Leadership risk ${idx + 1}`),
+        impact: ['High', 'Medium', 'Low'].includes(risk?.impact) ? risk.impact : 'Medium',
+        mitigation: sanitize(risk?.mitigation, 'Define an explicit mitigation plan and review it weekly with the relevant owner.'),
+        owner: sanitize(risk?.owner, 'You'),
+      }))
+      : [
+        { risk: 'Delegation continues to stop at task assignment instead of ownership transfer', impact: 'High', mitigation: 'Define outcomes, decision rights, checkpoints, and escalation triggers before handoff.', owner: 'You + direct report' },
+        { risk: 'Senior stakeholders continue to see the team as operational rather than strategic', impact: 'High', mitigation: 'Lead updates with context, trade-offs, and business impact instead of task lists.', owner: 'You' },
+        { risk: 'Calendar fills with tactical work and crowds out strategic thinking', impact: 'Medium', mitigation: 'Protect a recurring strategic block and remove or redesign low-leverage meetings.', owner: 'You' },
+        { risk: 'High standards suppress autonomy because people wait for approval', impact: 'Medium', mitigation: 'Make decision boundaries explicit and praise independent judgment publicly.', owner: 'You + team leads' },
       ],
+    talentPlan: {
+      accelerate: sanitizeList(raw?.talentPlan?.accelerate, [
+        'People already showing reliable judgment under ambiguity',
+        'Team members who can take fuller ownership with one level more coaching',
+        'Behaviors that turn execution wins into system improvements',
+        'Cross-functional collaborators who can become informal influence partners',
+      ], 4),
+      stabilize: sanitizeList(raw?.talentPlan?.stabilize, [
+        'Individuals who still need tighter decision boundaries',
+        'Behaviors that create rework because expectations are implied not explicit',
+        'Meetings where accountability is unclear after the conversation ends',
+        'Workflows that depend too heavily on your review before moving',
+      ], 4),
+      delegate: sanitizeList(raw?.talentPlan?.delegate, [
+        'Recurring status collection and routine follow-up tasks',
+        'One operational workflow that a high-potential report can fully own',
+        'Preparation work for leadership updates once the structure is defined',
+        'Low-complexity decisions that can be bounded with clear rules',
+      ], 4),
+    },
+    meetingBlueprint: {
+      team: {
+        purpose: sanitize(raw?.meetingBlueprint?.team?.purpose, 'Create clarity on ownership, priorities, and blockers without turning the meeting into a status recital.'),
+        cadence: sanitize(raw?.meetingBlueprint?.team?.cadence, 'Weekly'),
+        agenda: sanitizeList(raw?.meetingBlueprint?.team?.agenda, [
+          'Review top priorities and ownership shifts',
+          'Surface blockers and decision needs',
+          'Coach one capability or behavior that matters this week',
+          'Confirm next actions, owners, and deadlines',
+        ], 4),
+      },
+      leadership: {
+        purpose: sanitize(raw?.meetingBlueprint?.leadership?.purpose, 'Translate team progress into strategic signal, resourcing needs, and business impact for leaders above you.'),
+        cadence: sanitize(raw?.meetingBlueprint?.leadership?.cadence, 'Bi-weekly'),
+        agenda: sanitizeList(raw?.meetingBlueprint?.leadership?.agenda, [
+          'Context: what shifted and why it matters',
+          'Decisions made and trade-offs taken',
+          'Risks, support needed, and business impact',
+          'Forward view for the next 2-4 weeks',
+        ], 4),
+      },
+      stakeholder: {
+        purpose: sanitize(raw?.meetingBlueprint?.stakeholder?.purpose, 'Preserve alignment, reduce surprises, and maintain trust across functions that influence your team’s outcomes.'),
+        cadence: sanitize(raw?.meetingBlueprint?.stakeholder?.cadence, 'Monthly'),
+        agenda: sanitizeList(raw?.meetingBlueprint?.stakeholder?.agenda, [
+          'Review shared priorities and dependencies',
+          'Clarify ownership across boundaries',
+          'Resolve one emerging friction point',
+          'Align on next actions and communication rhythm',
+        ], 4),
+      },
+    },
     competencies,
   };
 }
@@ -238,62 +352,67 @@ async function generateAnalysis(questionAnswers) {
     '{',
     '  "leadershipScore": number 55-95,',
     '  "leadershipStage": "concise stage label like Tactical Manager → Strategic Leader",',
-    '  "executiveSummary": "200-300 words, specific to their answers, no generic coaching language",',
+    '  "executiveSummary": "350-500 words, highly specific to their answers, concrete and analytical rather than motivational",',
     '  "competencies": [',
-    '    {"name":"Strategic Thinking","score":number 55-95,"level":"Emerging|Developing|Strong|Advanced","deepDive":"80-120 words analyzing THIS person\'s strategic thinking based on their answers"},',
-    '    {"name":"Delegation & Empowerment","score":number,"level":"...","deepDive":"80-120 words"},',
-    '    {"name":"Coaching & Feedback","score":number,"level":"...","deepDive":"80-120 words"},',
-    '    {"name":"Influence & Stakeholder Mgmt","score":number,"level":"...","deepDive":"80-120 words"},',
-    '    {"name":"Execution & Accountability","score":number,"level":"...","deepDive":"80-120 words"},',
-    '    {"name":"Emotional Intelligence","score":number,"level":"...","deepDive":"80-120 words"}',
+    '    {"name":"Strategic Thinking","score":number 55-95,"level":"Emerging|Developing|Strong|Advanced","deepDive":"150-220 words analyzing THIS person based on their answers"},',
+    '    {"name":"Delegation & Empowerment","score":number,"level":"...","deepDive":"150-220 words"},',
+    '    {"name":"Coaching & Feedback","score":number,"level":"...","deepDive":"150-220 words"},',
+    '    {"name":"Influence & Stakeholder Mgmt","score":number,"level":"...","deepDive":"150-220 words"},',
+    '    {"name":"Execution & Accountability","score":number,"level":"...","deepDive":"150-220 words"},',
+    '    {"name":"Emotional Intelligence","score":number,"level":"...","deepDive":"150-220 words"}',
     '  ],',
-    '  "archetype": {"name":"The ...","description":"60-100 words describing this archetype","traits":["6 specific traits"]},',
+    '  "archetype": {"name":"The ...","description":"120-180 words describing this archetype","traits":["6 specific traits"]},',
+    '  "plateauRisk":"80-140 words explaining the most likely plateau or failure mode",',
     '  "topGrowthAreas":[',
-    '    {"title":"...","description":"60-100 words","actionSteps":["4 specific steps"]},',
-    '    {"title":"...","description":"60-100 words","actionSteps":["4 specific steps"]},',
-    '    {"title":"...","description":"60-100 words","actionSteps":["4 specific steps"]}',
+    '    {"title":"...","description":"120-180 words","actionSteps":["6 specific steps"]},',
+    '    {"title":"...","description":"120-180 words","actionSteps":["6 specific steps"]},',
+    '    {"title":"...","description":"120-180 words","actionSteps":["6 specific steps"]}',
     '  ],',
-    '  "blindSpots":["5 specific blind spots with behavioral evidence from answers"],',
-    '  "strengthLevers":["5 practical levers to exploit immediately"],',
-    '  "stakeholderPlaybook":["5 specific relationship-management actions with cadences"],',
-    '  "kpis":["6 measurable weekly leadership KPIs with target numbers"],',
-    '  "communicationScript":"150-200 words: a sample monthly update to executive stakeholders written in first person",',
+    '  "blindSpots":["6 specific blind spots with behavioral evidence from answers"],',
+    '  "strengthLevers":["6 practical levers to exploit immediately"],',
+    '  "stakeholderPlaybook":["6 specific relationship-management actions with cadences"],',
+    '  "kpis":["8 measurable weekly leadership KPIs with target numbers"],',
+    '  "communicationScript":"250-350 words: a sample monthly update to executive stakeholders written in first person",',
     '  "roadmap": {',
-    '    "month1":{"title":"...","theme":"short theme","actions":["5 concrete actions with deadlines"]},',
-    '    "month2":{"title":"...","theme":"short theme","actions":["5 concrete actions with deadlines"]},',
-    '    "month3":{"title":"...","theme":"short theme","actions":["5 concrete actions with deadlines"]}',
+    '    "month1":{"title":"...","theme":"short theme","actions":["6 concrete actions with deadlines"]},',
+    '    "month2":{"title":"...","theme":"short theme","actions":["6 concrete actions with deadlines"]},',
+    '    "month3":{"title":"...","theme":"short theme","actions":["6 concrete actions with deadlines"]}',
     '  },',
     '  "operatingCadence": {',
-    '    "daily":["3 habits tied to their answers"],',
-    '    "weekly":["3 operating rituals with owners"],',
-    '    "monthly":["3 strategic reviews or reflections"]',
+    '    "daily":["4 habits tied to their answers"],',
+    '    "weekly":["4 operating rituals with owners"],',
+    '    "monthly":["4 strategic reviews or reflections"]',
     '  },',
     '  "metricsDashboard": {',
-    '    "leadingIndicators":["4 measurable signals with numeric targets"],',
-    '    "laggingIndicators":["4 outcome metrics with timeframes"]',
+    '    "leadingIndicators":["5 measurable signals with numeric targets"],',
+    '    "laggingIndicators":["5 outcome metrics with timeframes"]',
     '  },',
     '  "decisionMatrix": {',
-    '    "immediateWins":["4 quick wins deliverable in <14 days tied to user answers"],',
-    '    "strategicBets":["4 longer initiatives with measurable payoff"]',
+    '    "immediateWins":["5 quick wins deliverable in <14 days tied to user answers"],',
+    '    "strategicBets":["5 longer initiatives with measurable payoff"]',
     '  },',
     '  "riskRegister":[',
     '    {"risk":"...","impact":"High|Medium|Low","mitigation":"specific plan","owner":"role"},',
     '    {"risk":"...","impact":"...","mitigation":"...","owner":"..."},',
+    '    {"risk":"...","impact":"...","mitigation":"...","owner":"..."},',
     '    {"risk":"...","impact":"...","mitigation":"...","owner":"..."}',
     '  ],',
     '  "talentPlan": {',
-    '    "accelerate":["3 people or behaviors to fast-track"],',
-    '    "stabilize":["3 gaps that need coaching"],',
-    '    "delegate":["3 responsibilities to offload"]',
+    '    "accelerate":["4 people or behaviors to fast-track"],',
+    '    "stabilize":["4 gaps that need coaching"],',
+    '    "delegate":["4 responsibilities to offload"]',
     '  },',
     '  "meetingBlueprint": {',
-    '    "team":{"purpose":"why this meeting exists","cadence":"e.g., weekly","agenda":["3 agenda lines"]},',
-    '    "leadership":{"purpose":"...","cadence":"...","agenda":["..."]},',
-    '    "stakeholder":{"purpose":"...","cadence":"...","agenda":["..."]}',
+    '    "team":{"purpose":"why this meeting exists","cadence":"e.g., weekly","agenda":["4 agenda lines"]},',
+    '    "leadership":{"purpose":"...","cadence":"...","agenda":["4 agenda lines"]},',
+    '    "stakeholder":{"purpose":"...","cadence":"...","agenda":["4 agenda lines"]}',
     '  },',
     '  "keyInsight":"1 powerful sentence that reframes how they should think about leadership",',
-    '  "ninetyDayOutcome":"100-150 words describing specific, measurable outcomes if plan is executed",',
-    '  "firstWeekPlan":["7 daily actions for the first week, one per day, specific and actionable"]',
+    '  "benchmarkNarrative":"120-180 words explaining where this person is ahead of peers and where they lag",',
+    '  "evolutionNarrative":"120-180 words explaining the mindset shift required for the next stage",',
+    '  "ninetyDayOutcome":"180-260 words describing specific, measurable outcomes if plan is executed",',
+    '  "firstWeekPlan":["7 daily actions for the first week, one per day, specific and actionable"],',
+    '  "finalReflection":"160-240 words of direct but premium final guidance that feels personal to this user"',
     '}',
     '',
     'User answers:',
@@ -304,7 +423,7 @@ async function generateAnalysis(questionAnswers) {
     model: 'gpt-4o',
     temperature: 0.5,
     response_format: { type: 'json_object' },
-    max_tokens: 4096,
+    max_tokens: 7000,
     messages: [
       { role: 'system', content: 'You generate premium leadership coaching report data. Be specific, personal, and actionable. Never be generic.' },
       { role: 'user', content: prompt },
