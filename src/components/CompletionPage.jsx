@@ -8,16 +8,16 @@ import CalendlyModal from "./CalendlyModal";
 
 // ─── Console log steps ────────────────────────────────────────────────────────
 const STEPS = [
-  { id: 0, label: "INITIALIZING ANALYSIS PROTOCOL",         duration: 380 },
-  { id: 1, label: "PARSING 12 ASSESSMENT RESPONSES",         duration: 520 },
-  { id: 2, label: "MAPPING LEADERSHIP ARCHETYPE",            duration: 640 },
-  { id: 3, label: "CROSS-REFERENCING MANAGEMENT PATTERNS",   duration: 700 },
-  { id: 4, label: "IDENTIFYING DEVELOPMENT GAPS",            duration: 580 },
-  { id: 5, label: "CALIBRATING GROWTH TRAJECTORY",           duration: 620 },
-  { id: 6, label: "BUILDING PERSONALISED ACTION FRAMEWORK",  duration: 680 },
-  { id: 7, label: "SCORING 5 LEADERSHIP DIMENSIONS",         duration: 540 },
-  { id: 8, label: "GENERATING STRATEGIC ROADMAP",            duration: 700 },
-  { id: 9, label: "COMPILING LONG-FORM PDF REPORT",          duration: 999 },
+  { id: 0, label: "INITIALIZING ANALYSIS PROTOCOL",         duration: 520 },
+  { id: 1, label: "PARSING 12 ASSESSMENT RESPONSES",        duration: 700 },
+  { id: 2, label: "MAPPING LEADERSHIP ARCHETYPE",           duration: 820 },
+  { id: 3, label: "CROSS-REFERENCING MANAGEMENT PATTERNS",  duration: 900 },
+  { id: 4, label: "IDENTIFYING DEVELOPMENT GAPS",           duration: 760 },
+  { id: 5, label: "CALIBRATING GROWTH TRAJECTORY",          duration: 820 },
+  { id: 6, label: "BUILDING PERSONALISED ACTION FRAMEWORK", duration: 880 },
+  { id: 7, label: "SCORING 5 LEADERSHIP DIMENSIONS",        duration: 720 },
+  { id: 8, label: "GENERATING STRATEGIC ROADMAP",           duration: 920 },
+  { id: 9, label: "COMPILING LONG-FORM PDF REPORT",         duration: 1200 },
 ];
 
 function Cursor() {
@@ -112,21 +112,23 @@ function MissionControlConsole({ onComplete, answers }) {
   useEffect(() => {
     let stepIdx = 0;
     const progStart = Date.now();
+    const PREP_PROGRESS_CAP = 94;
+    const CURVE_MS = 8500;
 
     // Continuously ease progress toward a moving target. This avoids
-    // sprinting to a hard threshold like 92% and then visibly stalling.
+    // sprinting into the 90s too early and then visibly stalling there.
     progressTimer.current = setInterval(() => {
       const totalElapsed = Date.now() - progStart;
       const isReadyToFinalize = apiDoneRef.current && finalStepVisibleRef.current;
       const target = isReadyToFinalize
         ? 100
-        : 98 * (1 - Math.exp(-totalElapsed / 3600));
+        : PREP_PROGRESS_CAP * (1 - Math.exp(-totalElapsed / CURVE_MS));
       const smoothing = isReadyToFinalize ? 0.22 : 0.12;
 
       progressValueRef.current += (target - progressValueRef.current) * smoothing;
 
       if (!isReadyToFinalize) {
-        progressValueRef.current = Math.min(progressValueRef.current, 98.8);
+        progressValueRef.current = Math.min(progressValueRef.current, PREP_PROGRESS_CAP + 0.4);
       }
 
       const nextProgress = isReadyToFinalize && progressValueRef.current > 99.95
@@ -267,7 +269,7 @@ function MissionControlConsole({ onComplete, answers }) {
                   ? "✓ REPORT COMPILED — READY"
                   : runningStep === STEPS.length - 1
                   ? `Finalising AI analysis... ${elapsed}s`
-                  : `Analysing responses... ${elapsed}s`}
+                  : `Analysing responses and building report... ${elapsed}s`}
               </div>
             </div>
           </motion.div>

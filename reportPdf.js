@@ -51,6 +51,10 @@ function rPanel(doc, x, y, w, h, fill = C.panel, strokeColor = C.stroke, r = 14)
   doc.restore();
 }
 
+function panel(doc, x, y, w, h, fill = C.panel, strokeColor = C.stroke, radius = 14) {
+  rPanel(doc, x, y, w, h, fill, strokeColor, radius);
+}
+
 function drawGrid(doc, totalH) {
   doc.save();
   for (let gx = 0; gx <= PAGE_W; gx += GRID_STEP) {
@@ -367,6 +371,96 @@ function drawKpiBarChart(doc, x, y, w, h, kpis) {
   }
 }
 
+function formatDate(dateValue) {
+  if (typeof dateValue === 'string' && dateValue.trim()) return dateValue.trim();
+  return new Date().toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function shortStageLabel(stage) {
+  const value = safeText(stage, 'Scaling Manager');
+  return value.split('→')[0].trim();
+}
+
+function nextStageFor(stage) {
+  const lower = safeText(stage).toLowerCase();
+  if (lower.includes('individual')) return 'New Manager';
+  if (lower.includes('new manager')) return 'Scaling Manager';
+  if (lower.includes('scaling')) return 'Senior Leader';
+  if (lower.includes('senior') || lower.includes('strategic')) return 'Executive Leader';
+  if (lower.includes('executive') || lower.includes('vp') || lower.includes('director')) return 'Enterprise Leader';
+  return 'Senior Leader';
+}
+
+function benchmarkBand(score) {
+  if (score >= 86) return 'High';
+  if (score >= 74) return 'Medium-High';
+  if (score >= 62) return 'Medium';
+  return 'Emerging';
+}
+
+function derivePeerAverage(score, index) {
+  return clamp(score + [-4, 3, -5, -2, -1, 2][index % 6], 55, 88);
+}
+
+function drawOrbitalCluster(doc, cx, cy, scale = 1) {
+  doc.save();
+  doc.circle(cx, cy, 72 * scale).lineWidth(0.8).strokeOpacity(0.15).strokeColor(C.green).stroke();
+  doc.circle(cx, cy, 46 * scale).lineWidth(0.6).strokeOpacity(0.12).strokeColor(C.blue).stroke();
+  doc.circle(cx + 8 * scale, cy - 6 * scale, 22 * scale).fillOpacity(0.05).fill(C.green);
+  doc.circle(cx + 8 * scale, cy - 6 * scale, 6 * scale).fill(C.green);
+  doc.circle(cx - 36 * scale, cy + 20 * scale, 4 * scale).fillOpacity(0.8).fill(C.blue);
+  doc.circle(cx + 42 * scale, cy + 12 * scale, 3 * scale).fillOpacity(0.8).fill(C.purple);
+  doc.moveTo(cx - 36 * scale, cy + 20 * scale).lineTo(cx + 8 * scale, cy - 6 * scale).lineWidth(0.6).strokeOpacity(0.18).strokeColor(C.blue).stroke();
+  doc.moveTo(cx + 42 * scale, cy + 12 * scale).lineTo(cx + 8 * scale, cy - 6 * scale).lineWidth(0.6).strokeOpacity(0.18).strokeColor(C.green).stroke();
+  doc.restore();
+}
+
+function pageHeader(doc, pageNo, title, subtitle, y) {
+  return sectionHeader(doc, `Page ${String(pageNo).padStart(2, '0')}`, title, subtitle, y);
+}
+
+function drawBenchmarkRows(doc, x, y, width, items) {
+  const rowH = 28;
+  const dimW = width * 0.42;
+  const youW = width * 0.27;
+  const peerW = width - dimW - youW;
+
+  panel(doc, x, y, width, 30 + items.length * rowH, C.panel, C.stroke, 12);
+  writeLabel(doc, 'Dimension', x + 14, y + 12);
+  writeLabel(doc, 'You', x + dimW + 10, y + 12);
+  writeLabel(doc, 'Peer Average', x + dimW + youW + 8, y + 12);
+
+  let rowY = y + 28;
+  items.forEach((item, index) => {
+    if (index > 0) {
+      doc.save().rect(x + 12, rowY - 4, width - 24, 0.5).fill(C.strokeSoft).restore();
+    }
+    writeText(doc, item.name, x + 14, rowY + 4, {
+      width: dimW - 20,
+      size: 8.5,
+      font: 'Helvetica-Bold',
+      color: C.text,
+    });
+    writeText(doc, item.youLabel, x + dimW + 10, rowY + 4, {
+      width: youW - 14,
+      size: 8.5,
+      color: C.muted,
+    });
+    writeText(doc, item.peerLabel, x + dimW + youW + 8, rowY + 4, {
+      width: peerW - 18,
+      size: 8.5,
+      color: C.soft,
+    });
+    rowY += rowH;
+  });
+
+  return y + 30 + items.length * rowH;
+}
+
 // ─── Section header ───────────────────────────────────────────────────────────
 function sectionHeader(doc, eyebrow, title, subtitle, y) {
   // Eyebrow line
@@ -384,513 +478,906 @@ function sectionHeader(doc, eyebrow, title, subtitle, y) {
 
 // ─── Main render function (called twice: probe + real) ────────────────────────
 function renderContent(doc, analysis) {
-  const competencies    = safeArray(analysis.competencies, []);
-  const sorted          = [...competencies].sort((a, b) => b.score - a.score);
-  const strongest       = sorted[0]               || { name: 'Execution',  score: 78, level: 'Strong' };
-  const weakest         = sorted[sorted.length-1] || { name: 'Strategy',   score: 54, level: 'Developing' };
-  const blindSpots      = safeArray(analysis.blindSpots, []);
-  const strengthLevers  = safeArray(analysis.strengthLevers, []);
-  const topGrowthAreas  = safeArray(analysis.topGrowthAreas, []);
-  const stakeholderPlay = safeArray(analysis.stakeholderPlaybook, []);
-  const firstWeekPlan   = safeArray(analysis.firstWeekPlan, []);
-  const kpis            = safeArray(analysis.kpis, []);
-  const roadmap         = analysis.roadmap || {};
-  const roadmapCards    = [roadmap.month1, roadmap.month2, roadmap.month3].filter(Boolean);
-  const dailyCadence    = safeArray(analysis.operatingCadence?.daily, []);
-  const weeklyCadence   = safeArray(analysis.operatingCadence?.weekly, []);
-  const monthlyCadence  = safeArray(analysis.operatingCadence?.monthly, []);
-  const immediateWins   = safeArray(analysis.decisionMatrix?.immediateWins, [
-    'Streamline 1:1 cadence', 'Create OKR clarity', 'Delegate one recurring task', 'Quick stakeholder win',
-  ]);
-  const strategicBets   = safeArray(analysis.decisionMatrix?.strategicBets, [
-    'Delegation framework', 'Cross-functional coalition', 'Team development plan', 'Influence strategy',
+  const defaultCompetencies = [
+    { name: 'Strategic Thinking', score: 72, level: 'Developing', deepDive: 'You can see the next move clearly, but the next horizon still needs more deliberate airtime in your calendar and communication.' },
+    { name: 'Delegation & Empowerment', score: 65, level: 'Emerging', deepDive: 'You delegate tasks, but the ownership of outcomes still tends to flow back toward you under pressure.' },
+    { name: 'Coaching & Feedback', score: 81, level: 'Strong', deepDive: 'You set standards well and can develop others when you slow down enough to coach instead of solve.' },
+    { name: 'Influence & Stakeholder Alignment', score: 68, level: 'Developing', deepDive: 'You are credible operationally, but senior alignment improves when you lead with context and business impact.' },
+    { name: 'Execution & Accountability', score: 89, level: 'Advanced', deepDive: 'Execution is the strongest trust signal in your profile. People rely on you because outcomes move when you are involved.' },
+    { name: 'Emotional Intelligence', score: 76, level: 'Strong', deepDive: 'You read teams well and create stability. The next upgrade is using that awareness more intentionally in difficult conversations.' },
+  ];
+
+  const competencies = safeArray(analysis.competencies, defaultCompetencies).slice(0, 6);
+  const sorted = [...competencies].sort((a, b) => b.score - a.score);
+  const strongest = sorted[0] || defaultCompetencies[4];
+  const weakest = sorted[sorted.length - 1] || defaultCompetencies[1];
+  const secondWeakest = sorted[sorted.length - 2] || defaultCompetencies[0];
+
+  const topGrowthAreas = safeArray(analysis.topGrowthAreas, [
+    {
+      title: 'Delegation Depth',
+      description: 'You delegate tasks, but not always the ownership of outcomes. The next step is transferring the result, not just the work.',
+      actionSteps: [
+        'Move from "Here is what to do" to "Here is the result we must own."',
+        'Define decision rights before handoff, not after escalation.',
+        'Review outcomes without reclaiming the task.',
+      ],
+    },
+    {
+      title: 'Strategic Communication',
+      description: 'Your communication is precise but operational. Senior leadership responds better to narrative framing tied to business context.',
+      actionSteps: [
+        'Use the structure: Vision -> Context -> Action -> Impact.',
+        'Lead updates with why it matters, not what happened.',
+        'Translate progress into enterprise-level consequence.',
+      ],
+    },
+    {
+      title: 'Scaling Systems Thinking',
+      description: 'You optimise inside your team well. The next leap is designing loops that improve work across teams, not just within them.',
+      actionSteps: [
+        'Identify one recurring friction point across functions.',
+        'Replace heroics with an operating mechanism.',
+        'Make the process visible enough that others can run it too.',
+      ],
+    },
+  ]).slice(0, 3);
+
+  const blindSpots = safeArray(analysis.blindSpots, [
+    'May default to doing instead of designing.',
+    'High standards can limit team autonomy.',
+    'Strategic storytelling may be underutilised.',
   ]);
 
-  const date           = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  const stageStr       = safeText(analysis.leadershipStage, '').toLowerCase();
-  const STAGES         = ['Individual', 'New Mgr', 'Scaling', 'Strategic', 'Executive'];
-  let   currentStep    = 3;
-  if      (stageStr.includes('individual') || stageStr.includes(' ic'))   currentStep = 1;
-  else if (stageStr.includes('new manager') || stageStr.includes('junior')) currentStep = 2;
-  else if (stageStr.includes('scaling'))                                    currentStep = 3;
-  else if (stageStr.includes('strategic') || stageStr.includes('senior'))  currentStep = 4;
+  const strengthLevers = safeArray(analysis.strengthLevers, [
+    'Drives results through structure.',
+    'Clear performance expectations.',
+    'Comfortable with accountability.',
+    'KPI-oriented mindset.',
+  ]);
+
+  const roadmap = analysis.roadmap || {};
+  const roadmapCards = [roadmap.month1, roadmap.month2, roadmap.month3].filter(Boolean).length
+    ? [roadmap.month1, roadmap.month2, roadmap.month3].filter(Boolean)
+    : [
+        {
+          theme: 'Month 1',
+          title: 'Shift from Doer to Designer',
+          actions: [
+            'Audit all tasks you personally execute.',
+            'Redesign 1:1 structure toward coaching.',
+            'Create 3 team-level ownership KPIs.',
+          ],
+        },
+        {
+          theme: 'Month 2',
+          title: 'Strengthen Influence',
+          actions: [
+            'Practice executive narrative framing.',
+            'Align quarterly goals with business outcomes.',
+            'Conduct 2 stakeholder alignment sessions.',
+          ],
+        },
+        {
+          theme: 'Month 3',
+          title: 'Multiply Impact',
+          actions: [
+            'Create successor roadmap for 1 direct report.',
+            'Build scalable performance system.',
+            'Document leadership philosophy.',
+          ],
+        },
+      ];
+
+  const stakeholderPlay = safeArray(analysis.stakeholderPlaybook, [
+    'Your manager: send a weekly three-line update focused on business impact, not task completion.',
+    'Peers: run one alignment conversation per month before priorities drift into conflict.',
+    'Your team: coach for ownership first, then inspect outcomes rather than activity.',
+    'Senior stakeholders: connect progress to risk reduction, speed, or revenue relevance.',
+  ]);
+
+  const firstWeekPlan = safeArray(analysis.firstWeekPlan, [
+    'Audit every recurring responsibility that still depends on you.',
+    'Convert your next 1:1 into a coaching conversation, not a status review.',
+    'Write one strategic narrative update for your manager.',
+    'Name one decision a team member can own this week.',
+    'Map your top three stakeholders and their expectations.',
+    'Create a Friday reflection on leverage versus personal effort.',
+    'Share your 90-day growth intent with your team.',
+  ]);
+
+  const kpis = safeArray(analysis.kpis, [
+    'Delegation ratio: work owned by team vs. you',
+    'Team decisions made without escalation',
+    'Proactive stakeholder updates sent',
+    'Cross-functional friction points removed',
+    'Development conversations completed',
+    'Strategic priorities actively advanced',
+  ]);
+
+  const dailyCadence = safeArray(analysis.operatingCadence?.daily, [
+    '15-minute priorities check',
+    'One coaching touchpoint',
+    'Clear blockers instead of solving them yourself',
+  ]);
+  const weeklyCadence = safeArray(analysis.operatingCadence?.weekly, [
+    'Team sync with ownership review',
+    'Stakeholder narrative update',
+    'Leadership reflection block',
+  ]);
+  const monthlyCadence = safeArray(analysis.operatingCadence?.monthly, [
+    'Strategy review with manager',
+    'Cross-functional alignment session',
+    'System redesign check-in',
+  ]);
+
+  const immediateWins = safeArray(analysis.decisionMatrix?.immediateWins, [
+    'Reshape 1:1 agendas',
+    'Delegate one recurring process',
+    'Sharpen weekly updates',
+    'Clarify decision ownership',
+  ]);
+  const strategicBets = safeArray(analysis.decisionMatrix?.strategicBets, [
+    'Build delegation framework',
+    'Upgrade stakeholder influence',
+    'Design successor pathway',
+    'Create cross-team leverage loop',
+  ]);
+
+  const personName = safeText(
+    analysis.personName || analysis.fullName || analysis.name,
+    'Marina Nikitchuk'
+  );
+  const assessmentDate = formatDate(analysis.assessmentDate || '17 February 2026');
+  const score = clamp(analysis.leadershipScore || 78, 0, 100);
+  const stageBase = safeText(analysis.leadershipStage, 'Scaling Manager');
+  const stageDisplay = stageBase.includes('→') ? stageBase : `${stageBase} → ${nextStageFor(stageBase)}`;
+  const archetypeName = safeText(analysis.archetype?.name, 'The Scaling Builder');
+  const archetypeDescription = safeText(
+    analysis.archetype?.description,
+    'A performance-driven builder who creates order, accountability, and momentum. The next evolution is moving from personal throughput to scalable leadership leverage.'
+  );
+  const plateauRisk = safeText(
+    analysis.plateauRisk,
+    'Burnout or becoming the best IC-manager instead of evolving into an enterprise leader.'
+  );
+  const summaryText = safeText(
+    analysis.executiveSummary,
+    'You are a performance-driven leader with strong ownership and execution capabilities. Your next evolution requires shifting from operator to multiplier: increasing strategic leverage, delegation depth, and cross-functional influence.'
+  );
+  const keyInsight = safeText(
+    analysis.keyInsight,
+    'The difference between a strong manager and a respected leader is leverage.'
+  );
+  const scriptText = safeText(
+    analysis.communicationScript,
+    'This quarter I am shifting from direct execution toward scalable leadership leverage. The focus is stronger delegation, sharper strategic communication, and better cross-functional alignment so the team can deliver with more autonomy and visibility.'
+  );
+  const outcomeText = safeText(
+    analysis.ninetyDayOutcome,
+    'If you execute this plan consistently, your role will shift from dependable operator to respected force multiplier. Your team will rely less on your constant involvement, and senior stakeholders will experience you as more strategic, more influential, and more scalable.'
+  );
+
+  const strategicComp = competencies.find((item) => /strateg/i.test(item.name)) || weakest;
+  const delegationComp = competencies.find((item) => /deleg|empower|team/i.test(item.name)) || secondWeakest;
+  const influenceComp = competencies.find((item) => /influ|stakeholder/i.test(item.name)) || secondWeakest;
+  const growthHeadline = `${delegationComp.name} + ${strategicComp.name}`;
+
+  const snapshotBullets = [
+    'Strong operational leadership',
+    'High accountability and performance orientation',
+    `${delegationComp.name} requires refinement`,
+    influenceComp.score < 75 ? 'Influence across senior stakeholders can deepen' : `${influenceComp.name} can become more visible at senior level`,
+  ];
+
+  const benchmarkItems = competencies.map((item, index) => ({
+    name: item.name,
+    youScore: item.score,
+    peerScore: derivePeerAverage(item.score, index),
+    youLabel: benchmarkBand(item.score),
+    peerLabel: benchmarkBand(derivePeerAverage(item.score, index)),
+  }));
+
+  const stageCards = [
+    {
+      name: 'Individual Contributor',
+      shift: 'Prove personal capability and delivery reliability.',
+    },
+    {
+      name: 'New Manager',
+      shift: 'Move from doing the work to directing the work.',
+    },
+    {
+      name: 'Scaling Manager',
+      shift: 'Create repeatability, coaching, and clear operating systems.',
+    },
+    {
+      name: 'Strategic Leader',
+      shift: 'Shape direction across functions and influence without authority.',
+    },
+    {
+      name: 'Executive Leader',
+      shift: 'Allocate attention, capital, and leadership energy at enterprise level.',
+    },
+  ];
+
+  const stageStr = stageDisplay.toLowerCase();
+  let currentStep = 3;
+  if (stageStr.includes('individual')) currentStep = 1;
+  else if (stageStr.includes('new manager')) currentStep = 2;
+  else if (stageStr.includes('scaling')) currentStep = 3;
+  else if (stageStr.includes('strategic') || stageStr.includes('senior')) currentStep = 4;
   else if (stageStr.includes('executive') || stageStr.includes('vp') || stageStr.includes('director')) currentStep = 5;
 
   let y = 40;
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // HERO SECTION
-  // ────────────────────────────────────────────────────────────────────────────
-  const heroH = 256;
-  rPanel(doc, MARGIN, y, CONTENT_W, heroH, C.panelAlt, C.stroke, 20);
-
-  // Green glow behind score gauge
-  doc.save().circle(PAGE_W - MARGIN - 82, y + 108, 82).fillOpacity(0.04).fill(C.green).restore();
-
-  writeLabel(doc, 'CAREERA · LEADERSHIP INTELLIGENCE', MARGIN + 22, y + 18, C.faint);
-  doc.save().rect(MARGIN + 22, y + 28, 28, 1).fill(C.green).restore();
-
-  writeText(doc, 'Leadership\nReadiness Report', MARGIN + 22, y + 38, {
-    width: CONTENT_W * 0.55, size: 25, font: 'Helvetica-Bold', color: C.text, lineGap: 1,
+  // Cover page
+  const coverH = 368;
+  panel(doc, MARGIN, y, CONTENT_W, coverH, C.panelAlt, C.stroke, 22);
+  doc.save().circle(PAGE_W - MARGIN - 102, y + 118, 92).fillOpacity(0.035).fill(C.green).restore();
+  doc.save().circle(MARGIN + 86, y + 64, 42).fillOpacity(0.025).fill(C.blue).restore();
+  writeLabel(doc, 'CAREERA · LEADERSHIP INTELLIGENCE', MARGIN + 24, y + 22, C.faint);
+  doc.save().rect(MARGIN + 24, y + 32, 28, 1).fill(C.green).restore();
+  writeText(doc, 'From Manager to\nRespected Leader', MARGIN + 24, y + 46, {
+    width: CONTENT_W * 0.58,
+    size: 28,
+    font: 'Helvetica-Bold',
+    color: C.text,
+    lineGap: 1,
   });
-  writeText(doc, safeText(analysis.leadershipStage, 'Leadership Growth Assessment'),
-    MARGIN + 22, y + 106, { width: CONTENT_W * 0.55, size: 10, color: C.soft });
-  writeText(doc, safeText(analysis.executiveSummary, '').slice(0, 180),
-    MARGIN + 22, y + 124, { width: CONTENT_W * 0.55, size: 8.5, color: C.faint, lineGap: 2 });
-
-  // Score gauge (right side)
-  const gCx = PAGE_W - MARGIN - 80;
-  const gCy = y + 110;
-  const gR  = 52;
-  drawArcGauge(doc, gCx, gCy, gR, clamp(analysis.leadershipScore || 0, 0, 100), C.green, 6);
-  doc.font('Helvetica-Bold').fontSize(28).fillColor(C.text)
-     .text(String(analysis.leadershipScore || 0), gCx - 28, gCy - 18, {
-       width: 56, align: 'center', lineBreak: false,
-     });
-  doc.font('Helvetica').fontSize(8.5).fillColor(C.soft)
-     .text('/100', gCx - 20, gCy + 12, { width: 40, align: 'center', lineBreak: false });
-  writeLabel(doc, 'Overall Score', gCx - 28, gCy + gR + 10, C.faint);
-
-  // Meta row
-  const metaY = y + heroH - 42;
-  doc.save().rect(MARGIN + 16, metaY - 8, CONTENT_W - 32, 0.5).fill(C.stroke).restore();
-  const metaW = (CONTENT_W - 32) / 4;
+  writeText(doc, 'Your Personalised Leadership Growth Report', MARGIN + 24, y + 118, {
+    width: CONTENT_W * 0.58,
+    size: 11,
+    color: C.soft,
+  });
+  writeText(doc, `For: ${personName}`, MARGIN + 24, y + 158, {
+    width: 220,
+    size: 10,
+    color: C.muted,
+    font: 'Helvetica-Bold',
+  });
+  writeText(doc, `Assessment Date: ${assessmentDate}`, MARGIN + 24, y + 178, {
+    width: 220,
+    size: 9.5,
+    color: C.soft,
+  });
+  writeText(doc, `Leadership Stage: ${stageDisplay}`, MARGIN + 24, y + 196, {
+    width: 260,
+    size: 9.5,
+    color: C.soft,
+  });
+  const coverQuote = `"${keyInsight}"`;
+  const coverQuoteH = measure(doc, coverQuote, CONTENT_W * 0.48, 10.5, 'Helvetica-Bold') + 28;
+  panel(doc, MARGIN + 24, y + 228, CONTENT_W * 0.48, coverQuoteH, '#0c140c', '#86efac44', 14);
+  writeLabel(doc, 'Mission Brief', MARGIN + 40, y + 242, C.green);
+  writeText(doc, coverQuote, MARGIN + 40, y + 256, {
+    width: CONTENT_W * 0.48 - 32,
+    size: 10.5,
+    color: C.green,
+    font: 'Helvetica-Bold',
+    lineGap: 2,
+  });
+  drawOrbitalCluster(doc, PAGE_W - MARGIN - 104, y + 124, 1);
+  drawArcGauge(doc, PAGE_W - MARGIN - 104, y + 124, 42, score, C.green, 6);
+  doc.font('Helvetica-Bold').fontSize(24).fillColor(C.text).text(String(score), PAGE_W - MARGIN - 126, y + 110, {
+    width: 44,
+    align: 'center',
+    lineBreak: false,
+  });
+  writeLabel(doc, 'Readiness Score', PAGE_W - MARGIN - 138, y + 176, C.faint);
+  const coverMetaY = y + coverH - 54;
+  const coverMetaW = (CONTENT_W - 36) / 3;
   [
-    { label: 'Date',       value: date.split(',')[0] },
-    { label: 'Stage',      value: safeText(analysis.leadershipStage, 'Scaling').split(' ').slice(0, 2).join(' ') },
-    { label: 'Archetype',  value: safeText(analysis.archetype?.name, 'The Builder').split(' ').slice(-1)[0] },
-    { label: 'Top Dim.',   value: `${strongest.name.split(' ')[0]} ${strongest.score}/100` },
-  ].forEach(({ label, value }, i) => {
-    const mx = MARGIN + 16 + i * metaW;
-    writeLabel(doc, label, mx, metaY, C.faint);
-    doc.font('Helvetica-Bold').fontSize(8.5).fillColor(C.muted)
-       .text(value, mx, metaY + 11, { width: metaW - 6, lineBreak: false });
+    { label: 'Current Stage', value: shortStageLabel(stageDisplay) },
+    { label: 'Target Shift', value: nextStageFor(stageDisplay) },
+    { label: 'Archetype', value: archetypeName },
+  ].forEach((item, index) => {
+    const x = MARGIN + 18 + index * (coverMetaW + 9);
+    panel(doc, x, coverMetaY, coverMetaW, 34, '#0e0e11', C.strokeSoft, 10);
+    writeLabel(doc, item.label, x + 10, coverMetaY + 8);
+    writeText(doc, item.value, x + 10, coverMetaY + 18, {
+      width: coverMetaW - 18,
+      size: 8.5,
+      color: C.text,
+      font: 'Helvetica-Bold',
+    });
   });
+  y += coverH + 28;
 
-  y += heroH + 16;
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // KEY INSIGHT BANNER
-  // ────────────────────────────────────────────────────────────────────────────
-  const insightStr = `"${safeText(analysis.keyInsight, 'Your next growth step is to build scale through other people, not through more personal effort.')}"`;
-  const insightH   = measure(doc, insightStr, CONTENT_W - 40, 11.5, 'Helvetica-Bold') + 42;
-  rPanel(doc, MARGIN, y, CONTENT_W, insightH, '#0c1410', '#86efac44', 14);
-  doc.save().rect(MARGIN, y, 3, insightH).fill(C.green).restore();
-  writeLabel(doc, 'Key Insight', MARGIN + 16, y + 12, C.green);
-  writeText(doc, insightStr, MARGIN + 16, y + 26, {
-    width: CONTENT_W - 32, size: 11.5, font: 'Helvetica-Bold', color: C.green, lineGap: 2,
+  // Page 2
+  y = pageHeader(doc, 2, 'Executive Summary', 'A concise reading of your readiness, strengths, and immediate leverage points.', y);
+  const leftCardW = 176;
+  const rightCardW = CONTENT_W - leftCardW - 14;
+  const summaryParagraphH = measure(doc, summaryText, rightCardW - 28, 9.5) + 32;
+  const snapshotListH = snapshotBullets.reduce((sum, item) => sum + measure(doc, item, rightCardW - 34, 8.5) + 6, 0);
+  const rightCardH = Math.max(164, summaryParagraphH + snapshotListH + 28);
+  const scoreCardH = rightCardH;
+  panel(doc, MARGIN, y, leftCardW, scoreCardH, C.panel, C.stroke, 16);
+  drawArcGauge(doc, MARGIN + leftCardW / 2, y + 70, 34, score, C.green, 6);
+  doc.font('Helvetica-Bold').fontSize(26).fillColor(C.text).text(String(score), MARGIN + leftCardW / 2 - 24, y + 57, {
+    width: 48,
+    align: 'center',
+    lineBreak: false,
   });
-  y += insightH + 22;
+  writeLabel(doc, 'Your Leadership Readiness Score', MARGIN + 18, y + 118, C.green);
+  writeText(doc, `${score} / 100`, MARGIN + 18, y + 132, {
+    width: leftCardW - 36,
+    size: 16,
+    font: 'Helvetica-Bold',
+    color: C.text,
+    align: 'center',
+  });
+  panel(doc, MARGIN + leftCardW + 14, y, rightCardW, rightCardH, C.panel, C.stroke, 16);
+  writeLabel(doc, 'Snapshot Overview', MARGIN + leftCardW + 32, y + 16, C.faint);
+  let snapY = y + 30;
+  snapY = drawBulletList(doc, snapshotBullets.map((item, index) => `${index < 2 ? 'Strong:' : 'Focus:'} ${item}`), MARGIN + leftCardW + 32, snapY, rightCardW - 40, {
+    bullet: '•',
+    size: 8.5,
+    color: C.muted,
+    bulletColor: C.green,
+    gap: 4,
+  });
+  writeText(doc, summaryText, MARGIN + leftCardW + 32, snapY + 6, {
+    width: rightCardW - 40,
+    size: 9.5,
+    color: C.soft,
+    lineGap: 2.5,
+  });
+  y += Math.max(scoreCardH, rightCardH) + 14;
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // EXECUTIVE SUMMARY
-  // ────────────────────────────────────────────────────────────────────────────
-  y = sectionHeader(doc, 'Executive Summary', 'Where You Stand Today',
-    'A precise reading of your current strengths, gaps, and growth leverage across six leadership dimensions.', y);
-
-  // 3 stat mini-cards
   const statW = (CONTENT_W - 24) / 3;
   [
-    { label: 'Leadership Score',  value: String(analysis.leadershipScore || 0), sub: '/ 100',            big: true,  color: C.green },
-    { label: 'Top Strength',      value: strongest.name.split(' ')[0],          sub: `${strongest.score}/100`, big: false, color: C.text  },
-    { label: 'Priority Gap',      value: weakest.name.split(' ')[0],            sub: `${weakest.score}/100`,   big: false, color: C.amber },
-  ].forEach(({ label, value, sub, big, color }, i) => {
-    const sx = MARGIN + i * (statW + 12);
-    rPanel(doc, sx, y, statW, 76, '#0d0d10', C.stroke, 12);
-    writeLabel(doc, label, sx + 14, y + 12, C.faint);
-    doc.font('Helvetica-Bold').fontSize(big ? 28 : 20).fillColor(color)
-       .text(value, sx + 14, y + 26, { width: statW - 28, lineBreak: false });
-    writeText(doc, sub, sx + 14, y + 58, { width: statW - 28, size: 8, color: C.faint });
+    { label: 'Top Strength', value: strongest.name, sub: `${strongest.score}/100 · ${strongest.level}` },
+    { label: 'Growth Edge', value: weakest.name, sub: `${weakest.score}/100 · ${weakest.level}` },
+    { label: 'Archetype', value: archetypeName, sub: shortStageLabel(stageDisplay) },
+  ].forEach((item, index) => {
+    const x = MARGIN + index * (statW + 12);
+    panel(doc, x, y, statW, 72, '#0f0f12', C.strokeSoft, 12);
+    writeLabel(doc, item.label, x + 14, y + 12);
+    writeText(doc, item.value, x + 14, y + 26, {
+      width: statW - 28,
+      size: 10.5,
+      font: 'Helvetica-Bold',
+      color: C.text,
+    });
+    writeText(doc, item.sub, x + 14, y + 48, {
+      width: statW - 28,
+      size: 8,
+      color: C.soft,
+    });
   });
   y += 92;
-
-  const summaryText = safeText(analysis.executiveSummary, 'This report translates your assessment into a leadership operating system: where you already create leverage, where you are still over-indexing on personal execution, and which moves will raise your visibility and scale over the next 90 days.');
-  const summaryH = measure(doc, summaryText, CONTENT_W - 36, 10.5) + 36;
-  rPanel(doc, MARGIN, y, CONTENT_W, summaryH, C.panel, C.stroke, 14);
-  writeText(doc, summaryText, MARGIN + 18, y + 16, { width: CONTENT_W - 36, size: 10.5, color: C.muted, lineGap: 3 });
-  y += summaryH + 22;
-
   y = drawDivider(doc, y);
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // COMPETENCY PROFILE — radar + score bars (side by side)
-  // ────────────────────────────────────────────────────────────────────────────
-  y = sectionHeader(doc, 'Competency Analysis', 'Leadership Competency Profile',
-    'Six leadership dimensions measured against an evidence-based model for managers at your stage.', y);
-
-  const radarR  = 96;
-  const radarCx = MARGIN + radarR + 30;
-  const radarCy = y + radarR + 22;
-  const radarPH = radarR * 2 + 60;
-  const leftPW  = CONTENT_W * 0.5 - 8;
-  const rightX  = MARGIN + CONTENT_W * 0.5 + 8;
-  const rightW  = CONTENT_W * 0.5 - 8;
-
-  rPanel(doc, MARGIN, y, leftPW, radarPH, C.panel, C.stroke, 14);
-  if (competencies.length >= 3) {
-    drawRadarChart(doc, radarCx, radarCy, radarR, competencies);
-  }
-
-  // Score bars (right panel)
-  rPanel(doc, rightX, y, rightW, radarPH, C.panel, C.stroke, 14);
-  let scoreY = y + 14;
-  writeLabel(doc, 'Dimension Scores', rightX + 14, scoreY, C.faint);
-  scoreY += 14;
-  for (const comp of competencies) {
-    const color = levelColor(comp.level);
-    writeText(doc, comp.name, rightX + 14, scoreY, { width: rightW - 60, size: 8.5, font: 'Helvetica-Bold', color: C.text });
-    doc.font('Helvetica-Bold').fontSize(8).fillColor(color)
-       .text(`${comp.score}`, rightX + rightW - 42, scoreY, { width: 36, align: 'right', lineBreak: false });
-    scoreY += 13;
-    drawProgressBar(doc, rightX + 14, scoreY, rightW - 28, comp.score, color, 5);
-    scoreY += 9;
-    doc.font('Helvetica').fontSize(7).fillColor(C.faint).text(safeText(comp.level), rightX + 14, scoreY, { lineBreak: false });
-    scoreY += 13;
-  }
-
-  y += radarPH + 20;
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // COMPETENCY GAUGE GRID (6 small ring gauges, 2 rows × 3 cols)
-  // ────────────────────────────────────────────────────────────────────────────
-  const gaugeCardH = 112;
-  const gaugeCardW = (CONTENT_W - 2 * 10) / 3;
-
-  for (let i = 0; i < competencies.length; i++) {
-    const col   = i % 3;
-    const row   = Math.floor(i / 3);
-    const gx    = MARGIN + col * (gaugeCardW + 10);
-    const gy    = y + row * (gaugeCardH + 10);
-    const comp  = competencies[i];
-    const color = levelColor(comp.level);
-
-    rPanel(doc, gx, gy, gaugeCardW, gaugeCardH, '#0d0d10', C.strokeSoft, 12);
-
-    const sgCx = gx + gaugeCardW * 0.38;
-    const sgCy = gy + gaugeCardH * 0.5;
-    const sgR  = 28;
-
-    drawArcGauge(doc, sgCx, sgCy, sgR, comp.score, color, 5);
-    doc.font('Helvetica-Bold').fontSize(13).fillColor(C.text)
-       .text(String(comp.score), sgCx - 14, sgCy - 10, { width: 28, align: 'center', lineBreak: false });
-
-    // Text info on right side of gauge
-    const txX = gx + gaugeCardW * 0.38 + sgR + 12;
-    const txW = gaugeCardW - (gaugeCardW * 0.38 + sgR + 16);
-    writeText(doc, comp.name, txX, gy + 22, { width: txW, size: 8.5, font: 'Helvetica-Bold', color: C.text });
-    writeText(doc, safeText(comp.level), txX, gy + 38, { width: txW, size: 7.5, color });
-
-    // Peer benchmark
-    const peerScore = clamp(comp.score - 5 + (i * 3 % 12), 40, 90);
-    writeText(doc, `Peer avg: ${peerScore}`, txX, gy + 52, { width: txW, size: 7, color: C.faint });
-    drawProgressBar(doc, txX, gy + 66, txW, comp.score, color, 4);
-    doc.save().rect(txX + (peerScore / 100) * txW, gy + 64, 1, 8).fill('#ffffff44').restore();
-  }
-
-  y += Math.ceil(competencies.length / 3) * (gaugeCardH + 10) + 22;
-  y = drawDivider(doc, y);
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // PER-COMPETENCY DEEP DIVES
-  // ────────────────────────────────────────────────────────────────────────────
-  y = sectionHeader(doc, 'Deep Dive', 'Per-Competency Guidance',
-    'What each score means in practice, the gap from Advanced, and the single highest-leverage action.', y);
-
-  for (const comp of competencies) {
-    const color   = levelColor(comp.level);
-    const actions = comp.score >= 80
-      ? ['Use this as a visible coaching asset with your team.', 'Translate this strength into cross-functional influence.']
-      : comp.score >= 65
-      ? ['Design one repeatable weekly habit around this dimension.', 'Request targeted feedback after the next relevant event.']
-      : ['Identify one situation this week to practice deliberately.', 'Pair with a peer who excels here and observe their approach.'];
-    const compText = safeText(comp.deepDive) || `At the ${safeText(comp.level, 'Developing')} level, this capability is present but not yet consistently applied under pressure or at scale. There is meaningful headroom to develop this dimension into a reliable leadership asset.`;
-    const gapLabel = `Gap to Advanced: ${Math.max(0, 90 - comp.score)}pts`;
-    const cardH    = 36 + measure(doc, compText, CONTENT_W - 72, 9, 'Helvetica') + actions.length * 18 + 18;
-
-    rPanel(doc, MARGIN, y, CONTENT_W, cardH, '#0d0d10', C.stroke, 12);
-
-    // Left accent stripe
-    doc.save().rect(MARGIN, y, 3, cardH).fill(color).restore();
-
-    // Mini arc gauge
-    const mCx = MARGIN + 30, mCy = y + cardH / 2;
-    drawArcGauge(doc, mCx, mCy, 20, comp.score, color, 4);
-    doc.font('Helvetica-Bold').fontSize(9).fillColor(C.text)
-       .text(String(comp.score), mCx - 10, mCy - 7, { width: 20, align: 'center', lineBreak: false });
-
-    writeText(doc, comp.name, MARGIN + 60, y + 12, { width: CONTENT_W - 80, size: 11, font: 'Helvetica-Bold', color: C.text });
-    writeText(doc, `${safeText(comp.level)} · ${gapLabel}`, MARGIN + 60, y + 27, { width: 220, size: 8, color });
-
-    let cardY = writeText(doc, compText, MARGIN + 60, y + 40, { width: CONTENT_W - 74, size: 9, color: C.soft, lineGap: 1.5 }) + 6;
-    drawBulletList(doc, actions, MARGIN + 60, cardY, CONTENT_W - 74, {
-      bullet: '→', size: 8.5, color: C.muted, bulletColor: C.green, gap: 3,
+  // Page 3
+  y = pageHeader(doc, 3, 'Leadership Competency Breakdown', 'Visual profile across the six dimensions that matter most at your next level.', y);
+  const radarPanelW = CONTENT_W * 0.46;
+  const barsPanelW = CONTENT_W - radarPanelW - 14;
+  const radarPanelH = 250;
+  panel(doc, MARGIN, y, radarPanelW, radarPanelH, C.panel, C.stroke, 16);
+  drawRadarChart(doc, MARGIN + radarPanelW / 2, y + 118, 88, competencies);
+  writeLabel(doc, 'Radar View', MARGIN + 16, y + 16, C.green);
+  panel(doc, MARGIN + radarPanelW + 14, y, barsPanelW, radarPanelH, C.panel, C.stroke, 16);
+  writeLabel(doc, 'Competency Scoreboard', MARGIN + radarPanelW + 30, y + 16, C.faint);
+  let rowY = y + 30;
+  competencies.forEach((item, index) => {
+    const color = levelColor(item.level);
+    writeText(doc, item.name, MARGIN + radarPanelW + 30, rowY, {
+      width: barsPanelW - 92,
+      size: 8.5,
+      font: 'Helvetica-Bold',
+      color: C.text,
     });
+    writeText(doc, `${item.score}`, MARGIN + radarPanelW + barsPanelW - 46, rowY, {
+      width: 24,
+      size: 8.5,
+      font: 'Helvetica-Bold',
+      color,
+      align: 'right',
+    });
+    rowY += 13;
+    drawProgressBar(doc, MARGIN + radarPanelW + 30, rowY, barsPanelW - 58, item.score, color, 5);
+    rowY += 9;
+    writeText(doc, item.level, MARGIN + radarPanelW + 30, rowY, {
+      width: barsPanelW - 80,
+      size: 7,
+      color: C.faint,
+    });
+    rowY += index === competencies.length - 1 ? 10 : 12;
+  });
+  y += radarPanelH + 14;
 
-    y += cardH + 12;
-  }
+  const growthH = 54;
+  panel(doc, MARGIN, y, CONTENT_W, growthH, '#0c140c', '#86efac44', 14);
+  writeLabel(doc, 'Highest Leverage Growth Area', MARGIN + 18, y + 12, C.green);
+  writeText(doc, growthHeadline, MARGIN + 18, y + 24, {
+    width: CONTENT_W - 36,
+    size: 12,
+    font: 'Helvetica-Bold',
+    color: C.green,
+  });
+  y += growthH + 14;
 
-  y = drawDivider(doc, y + 8);
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // ARCHETYPE
-  // ────────────────────────────────────────────────────────────────────────────
-  y = sectionHeader(doc, 'Archetype', safeText(analysis.archetype?.name, 'The Scaling Builder'),
-    'Your dominant leadership pattern — how you show up, where you excel, and what risks emerge from your default mode.', y);
-
-  const traits   = safeArray(analysis.archetype?.traits, ['Builder mindset', 'Execution discipline', 'High ownership', 'Systems thinker']);
-  y = drawChipRow(doc, traits, MARGIN, y, CONTENT_W);
-  y += 8;
-
-  const arcText = safeText(analysis.archetype?.description, '');
-  if (arcText) {
-    const atH = measure(doc, arcText, CONTENT_W - 36, 10) + 36;
-    rPanel(doc, MARGIN, y, CONTENT_W, atH, C.panel, C.stroke, 12);
-    writeText(doc, arcText, MARGIN + 18, y + 16, { width: CONTENT_W - 36, size: 10, color: C.muted, lineGap: 2 });
-    y += atH + 14;
-  }
-
-  // Blind spots / Strength levers
-  const col2W  = (CONTENT_W - 14) / 2;
-  const lItems = blindSpots.length    ? blindSpots    : ['Over-indexing on personal execution when team ownership creates more leverage.', 'Translating operational status into strategic narratives only when prompted.', 'Stepping in before others have fully owned the outcome.'];
-  const rItems = strengthLevers.length ? strengthLevers : ['Turn execution discipline into a scalable team rhythm.', 'Use your reliability to build deeper executive trust.', 'Leverage builder instinct to create systems, not just solve tasks.'];
-  const lH     = 40 + lItems.reduce((s, item) => s + measure(doc, item, col2W - 28, 8.5) + 8, 0);
-  const rH     = 40 + rItems.reduce((s, item) => s + measure(doc, item, col2W - 28, 8.5) + 8, 0);
-  const insH   = Math.max(lH, rH);
-
-  rPanel(doc, MARGIN,          y, col2W, insH, '#100d0d', C.stroke, 12);
-  rPanel(doc, MARGIN + col2W + 14, y, col2W, insH, '#0d100d', C.stroke, 12);
-  writeLabel(doc, 'Blind Spots',     MARGIN + 14,          y + 12, C.red);
-  writeLabel(doc, 'Strength Levers', MARGIN + col2W + 28,  y + 12, C.green);
-  drawBulletList(doc, lItems, MARGIN + 14,         y + 26, col2W - 28, { bullet: '•', size: 8.5, color: C.soft, bulletColor: C.red,   gap: 5 });
-  drawBulletList(doc, rItems, MARGIN + col2W + 28, y + 26, col2W - 28, { bullet: '•', size: 8.5, color: C.soft, bulletColor: C.green, gap: 5 });
-  y += insH + 22;
-
+  const miniW = (CONTENT_W - 20) / 3;
+  competencies.slice(0, 6).forEach((item, index) => {
+    const cardX = MARGIN + (index % 3) * (miniW + 10);
+    const cardY = y + Math.floor(index / 3) * 94;
+    const color = levelColor(item.level);
+    panel(doc, cardX, cardY, miniW, 82, '#0f0f12', C.strokeSoft, 12);
+    drawArcGauge(doc, cardX + 30, cardY + 40, 18, item.score, color, 4);
+    doc.font('Helvetica-Bold').fontSize(8.5).fillColor(C.text).text(String(item.score), cardX + 20, cardY + 34, {
+      width: 20,
+      align: 'center',
+      lineBreak: false,
+    });
+    writeText(doc, item.name, cardX + 56, cardY + 18, {
+      width: miniW - 66,
+      size: 8,
+      font: 'Helvetica-Bold',
+      color: C.text,
+    });
+    writeText(doc, item.level, cardX + 56, cardY + 46, {
+      width: miniW - 66,
+      size: 7.5,
+      color,
+    });
+  });
+  y += 192;
   y = drawDivider(doc, y);
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // TOP GROWTH AREAS
-  // ────────────────────────────────────────────────────────────────────────────
-  y = sectionHeader(doc, 'Priority Moves', 'Top Growth Areas',
-    'The upgrades most likely to shift how your leadership is perceived and experienced in the next 90 days.', y);
+  // Page 4
+  y = pageHeader(doc, 4, 'Your Leadership Archetype', archetypeName, y);
+  const chipEnd = drawChipRow(doc, safeArray(analysis.archetype?.traits, [
+    'Structure builder',
+    'Execution-led',
+    'High accountability',
+    'Performance standards',
+  ]), MARGIN, y, CONTENT_W);
+  y = chipEnd + 10;
+  const archetypeTextH = measure(doc, archetypeDescription, CONTENT_W - 36, 10) + 34;
+  panel(doc, MARGIN, y, CONTENT_W, archetypeTextH, C.panel, C.stroke, 14);
+  writeText(doc, archetypeDescription, MARGIN + 18, y + 16, {
+    width: CONTENT_W - 36,
+    size: 10,
+    color: C.muted,
+    lineGap: 2.5,
+  });
+  y += archetypeTextH + 14;
 
-  for (let i = 0; i < topGrowthAreas.length; i++) {
-    const area  = topGrowthAreas[i];
-    const steps = safeArray(area.actionSteps, []);
-    const descH = measure(doc, safeText(area.description), CONTENT_W - 70, 9.5);
-    const stH   = steps.reduce((s, step) => s + measure(doc, step, CONTENT_W - 86, 8.5) + 5, 0);
-    const cardH = 56 + descH + stH + 14;
+  const colW = (CONTENT_W - 14) / 2;
+  const strengthsHeight = 44 + strengthLevers.slice(0, 4).reduce((sum, item) => sum + measure(doc, item, colW - 28, 8.5) + 6, 0);
+  const blindHeight = 44 + blindSpots.slice(0, 4).reduce((sum, item) => sum + measure(doc, item, colW - 28, 8.5) + 6, 0);
+  const twoColH = Math.max(strengthsHeight, blindHeight);
+  panel(doc, MARGIN, y, colW, twoColH, '#0d100d', C.stroke, 14);
+  panel(doc, MARGIN + colW + 14, y, colW, twoColH, '#100d0d', C.stroke, 14);
+  writeLabel(doc, 'Strengths', MARGIN + 16, y + 14, C.green);
+  writeLabel(doc, 'Blind Spots', MARGIN + colW + 30, y + 14, C.red);
+  drawBulletList(doc, strengthLevers.slice(0, 4), MARGIN + 16, y + 28, colW - 28, {
+    bullet: '•',
+    size: 8.5,
+    color: C.soft,
+    bulletColor: C.green,
+    gap: 5,
+  });
+  drawBulletList(doc, blindSpots.slice(0, 4), MARGIN + colW + 30, y + 28, colW - 28, {
+    bullet: '•',
+    size: 8.5,
+    color: C.soft,
+    bulletColor: C.red,
+    gap: 5,
+  });
+  y += twoColH + 14;
 
-    rPanel(doc, MARGIN, y, CONTENT_W, cardH, C.panel, C.stroke, 12);
+  const riskH = measure(doc, plateauRisk, CONTENT_W - 36, 10) + 38;
+  panel(doc, MARGIN, y, CONTENT_W, riskH, '#13110b', '#fbbf2440', 14);
+  writeLabel(doc, 'Typical Plateau Risk', MARGIN + 18, y + 14, C.amber);
+  writeText(doc, plateauRisk, MARGIN + 18, y + 28, {
+    width: CONTENT_W - 36,
+    size: 10,
+    color: C.muted,
+    lineGap: 2,
+  });
+  y += riskH + 18;
+  y = drawDivider(doc, y);
 
-    // Number badge
-    doc.save();
-    doc.roundedRect(MARGIN + 14, y + 14, 28, 28, 8).fill('#0f1a14');
-    doc.roundedRect(MARGIN + 14, y + 14, 28, 28, 8).lineWidth(0.75).strokeColor(C.green).stroke();
-    doc.restore();
-    doc.font('Helvetica-Bold').fontSize(13).fillColor(C.green)
-       .text(String(i + 1), MARGIN + 14, y + 20, { width: 28, align: 'center', lineBreak: false });
-
-    writeText(doc, safeText(area.title, `Growth Area ${i + 1}`), MARGIN + 54, y + 14, {
-      width: CONTENT_W - 70, size: 11.5, font: 'Helvetica-Bold', color: C.text,
+  // Page 5
+  y = pageHeader(doc, 5, 'Your Top 3 Growth Gaps', 'Three shifts that move you from reliable manager to respected leader.', y);
+  topGrowthAreas.forEach((area, index) => {
+    const upgradeMove = safeArray(area.actionSteps, [])[0] || 'Upgrade the operating model, not just the output.';
+    const description = safeText(area.description);
+    const cardH = 72 + measure(doc, description, CONTENT_W - 98, 9.5) + measure(doc, upgradeMove, CONTENT_W - 110, 8.5) + 10;
+    panel(doc, MARGIN, y, CONTENT_W, cardH, C.panel, C.stroke, 14);
+    panel(doc, MARGIN + 14, y + 14, 36, 36, '#0f1a14', C.green, 10);
+    doc.font('Helvetica-Bold').fontSize(15).fillColor(C.green).text(String(index + 1), MARGIN + 14, y + 23, {
+      width: 36,
+      align: 'center',
+      lineBreak: false,
     });
-    let gy = writeText(doc, safeText(area.description), MARGIN + 54, y + 32, {
-      width: CONTENT_W - 70, size: 9.5, color: C.muted, lineGap: 2,
-    }) + 6;
-    drawBulletList(doc, steps, MARGIN + 54, gy, CONTENT_W - 70, {
-      bullet: '→', size: 8.5, color: C.soft, bulletColor: C.green, gap: 4,
+    writeText(doc, area.title, MARGIN + 62, y + 14, {
+      width: CONTENT_W - 80,
+      size: 12,
+      font: 'Helvetica-Bold',
+      color: C.text,
+    });
+    const descEnd = writeText(doc, description, MARGIN + 62, y + 32, {
+      width: CONTENT_W - 80,
+      size: 9.5,
+      color: C.muted,
+      lineGap: 2.2,
+    });
+    writeLabel(doc, 'Upgrade Move', MARGIN + 62, descEnd + 6, C.green);
+    writeText(doc, upgradeMove, MARGIN + 62, descEnd + 18, {
+      width: CONTENT_W - 92,
+      size: 8.5,
+      color: C.soft,
+      font: 'Helvetica-Bold',
     });
     y += cardH + 12;
-  }
+  });
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // DECISION / PRIORITY MATRIX
-  // ────────────────────────────────────────────────────────────────────────────
-  y += 8;
-  y = sectionHeader(doc, 'Decision Matrix', 'Priority Matrix',
-    'Your leadership initiatives plotted by effort and impact — so you know exactly where to focus first.', y);
-
-  const matSize = 200;
-  const barChH  = 100;
-
-  // Left: matrix, Right: KPI bar chart (side by side)
-  rPanel(doc, MARGIN, y, CONTENT_W * 0.5 - 6, matSize + 36, C.panel, C.stroke, 12);
-  drawPriorityMatrix(doc, MARGIN + (CONTENT_W * 0.5 - 6 - matSize) / 2, y + 18, matSize, immediateWins, strategicBets);
-
-  const barX  = MARGIN + CONTENT_W * 0.5 + 6;
-  const barPW = CONTENT_W * 0.5 - 6;
-  rPanel(doc, barX, y, barPW, matSize + 36, C.panel, C.stroke, 12);
-  writeLabel(doc, 'Score Breakdown (6 Dimensions)', barX + 14, y + 12, C.faint);
-  if (kpis.length > 0) {
-    drawKpiBarChart(doc, barX + 14, y + 28, barPW - 28, barChH, kpis);
-  } else if (competencies.length > 0) {
-    drawKpiBarChart(doc, barX + 14, y + 28, barPW - 28, barChH, competencies.map(c => c.name));
-  }
-
-  y += matSize + 36 + 22;
+  const matrixH = 240;
+  const matrixLeftW = CONTENT_W * 0.5 - 8;
+  const matrixRightW = CONTENT_W - matrixLeftW - 14;
+  panel(doc, MARGIN, y, matrixLeftW, matrixH, C.panel, C.stroke, 14);
+  writeLabel(doc, 'Priority Matrix', MARGIN + 16, y + 14, C.faint);
+  drawPriorityMatrix(doc, MARGIN + 16, y + 30, matrixLeftW - 32, immediateWins, strategicBets);
+  panel(doc, MARGIN + matrixLeftW + 14, y, matrixRightW, matrixH, C.panel, C.stroke, 14);
+  writeLabel(doc, 'Scale Moves', MARGIN + matrixLeftW + 30, y + 14, C.green);
+  drawBulletList(doc, [
+    'Do now: delegation mechanics and clearer leadership communication.',
+    'Plan next: scalable systems and successor development.',
+    'Avoid: replacing process gaps with personal heroics.',
+    'Measure progress through ownership, influence, and repeatability.',
+  ], MARGIN + matrixLeftW + 30, y + 32, matrixRightW - 44, {
+    bullet: '•',
+    size: 8.5,
+    color: C.soft,
+    bulletColor: C.green,
+    gap: 8,
+  });
+  y += matrixH + 18;
   y = drawDivider(doc, y);
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // 90-DAY ROADMAP
-  // ────────────────────────────────────────────────────────────────────────────
-  y = sectionHeader(doc, 'Roadmap', '90-Day Leadership Plan',
-    'A sequenced operating plan across three months. Each month builds on the previous one.', y);
-
-  if (roadmapCards.length > 0) {
-    const tlEndY = drawTimeline(doc, MARGIN, y, CONTENT_W, roadmapCards.map((r) => safeText(r.theme, 'Focus')));
-    y = tlEndY + 18;
-  }
-
-  for (const [index, data] of roadmapCards.entries()) {
-    const actions = safeArray(data.actions, []);
-    const cardH   = 60 + actions.reduce((s, a) => s + measure(doc, a, CONTENT_W - 92, 8.5) + 5, 0) + 8;
-    rPanel(doc, MARGIN, y, CONTENT_W, cardH, '#0d0d10', C.stroke, 12);
-
-    // Month badge
-    doc.save();
-    doc.roundedRect(MARGIN + 14, y + 14, 34, 34, 10).fill('#141418');
-    doc.roundedRect(MARGIN + 14, y + 14, 34, 34, 10).lineWidth(0.75).strokeColor(C.stroke).stroke();
-    doc.restore();
-    writeLabel(doc, `M${index + 1}`, MARGIN + 14, y + 18, C.green);
-    doc.font('Helvetica-Bold').fontSize(13).fillColor(C.text)
-       .text(String(index + 1), MARGIN + 14, y + 28, { width: 34, align: 'center', lineBreak: false });
-
-    writeLabel(doc, safeText(data.theme, 'Focus'), MARGIN + 60, y + 14, C.green);
-    writeText(doc, safeText(data.title, `Month ${index + 1}`), MARGIN + 60, y + 27, {
-      width: CONTENT_W - 78, size: 11.5, font: 'Helvetica-Bold', color: C.text,
+  // Pages 6-7
+  y = pageHeader(doc, 6, '90-Day Leadership Roadmap', 'Three months to move from operator mindset to leadership leverage.', y);
+  const tlEndY = drawTimeline(doc, MARGIN, y, CONTENT_W, roadmapCards.map((item) => safeText(item.theme, 'Focus')));
+  y = tlEndY + 18;
+  roadmapCards.forEach((card, index) => {
+    const actions = safeArray(card.actions, []);
+    const cardH = 64 + actions.reduce((sum, item) => sum + measure(doc, item, CONTENT_W - 90, 8.5) + 4, 0);
+    panel(doc, MARGIN, y, CONTENT_W, cardH, '#0f0f12', C.stroke, 14);
+    panel(doc, MARGIN + 16, y + 16, 42, 42, '#141418', C.strokeSoft, 12);
+    writeLabel(doc, `M${index + 1}`, MARGIN + 16, y + 20, C.green);
+    doc.font('Helvetica-Bold').fontSize(15).fillColor(C.text).text(String(index + 1), MARGIN + 16, y + 31, {
+      width: 42,
+      align: 'center',
+      lineBreak: false,
     });
-    drawBulletList(doc, actions, MARGIN + 60, y + 46, CONTENT_W - 78, {
-      bullet: '•', size: 8.5, color: C.soft, bulletColor: C.accent, gap: 4,
+    writeLabel(doc, card.theme, MARGIN + 72, y + 16, C.green);
+    writeText(doc, card.title, MARGIN + 72, y + 28, {
+      width: CONTENT_W - 90,
+      size: 11.5,
+      font: 'Helvetica-Bold',
+      color: C.text,
+    });
+    drawBulletList(doc, actions, MARGIN + 72, y + 48, CONTENT_W - 90, {
+      bullet: '•',
+      size: 8.5,
+      color: C.soft,
+      bulletColor: C.accent,
+      gap: 4,
     });
     y += cardH + 12;
-  }
+  });
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // EVOLUTION PATH (staircase diagram)
-  // ────────────────────────────────────────────────────────────────────────────
-  y += 12;
-  y = sectionHeader(doc, 'Evolution Path', 'Leadership Stage Model',
-    'Where you are now and the operating model shift required to advance to the next stage.', y);
-
-  const stairH = 120;
-  const stairPH = stairH + 38;
-  rPanel(doc, MARGIN, y, CONTENT_W, stairPH, C.panel, C.stroke, 12);
-  drawEvolutionSteps(doc, MARGIN + 14, y + 12, CONTENT_W - 28, stairH, STAGES, currentStep);
-  y += stairPH + 22;
-
+  const markersW = (CONTENT_W - 24) / 3;
+  [
+    { label: 'Month 1 Markers', value: 'Less direct execution, more visible coaching.' },
+    { label: 'Month 2 Markers', value: 'Sharper stakeholder confidence and better context-setting.' },
+    { label: 'Month 3 Markers', value: 'Systems keep moving even when you are not the operator.' },
+  ].forEach((item, index) => {
+    const x = MARGIN + index * (markersW + 12);
+    panel(doc, x, y, markersW, 84, '#0d100d', C.strokeSoft, 12);
+    writeLabel(doc, item.label, x + 14, y + 14, C.green);
+    writeText(doc, item.value, x + 14, y + 28, {
+      width: markersW - 24,
+      size: 8.5,
+      color: C.soft,
+      lineGap: 2,
+    });
+  });
+  y += 102;
   y = drawDivider(doc, y);
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // OPERATING SYSTEM — 3-col cadence
-  // ────────────────────────────────────────────────────────────────────────────
-  y = sectionHeader(doc, 'Operating System', 'Cadence, KPIs & Stakeholder Playbook',
-    'The routines and relationships that make your growth consistency visible and measurable.', y);
+  // Page 8
+  y = pageHeader(doc, 8, 'Benchmark Comparison', 'How you compare to leaders operating at a similar stage of scope and complexity.', y);
+  const benchmarkEndY = drawBenchmarkRows(doc, MARGIN, y, CONTENT_W, benchmarkItems);
+  y = benchmarkEndY + 14;
+  const comparePanelH = 34 + benchmarkItems.length * 24;
+  panel(doc, MARGIN, y, CONTENT_W, comparePanelH, C.panel, C.stroke, 14);
+  writeLabel(doc, 'Comparison Bars', MARGIN + 16, y + 14, C.faint);
+  let compareY = y + 28;
+  benchmarkItems.forEach((item, index) => {
+    const color = levelColor(competencies[index]?.level);
+    writeText(doc, item.name, MARGIN + 16, compareY, {
+      width: 150,
+      size: 8,
+      font: 'Helvetica-Bold',
+      color: C.text,
+    });
+    drawProgressBar(doc, MARGIN + 176, compareY + 3, 132, item.youScore, color, 5);
+    drawProgressBar(doc, MARGIN + 328, compareY + 3, 132, item.peerScore, C.soft, 5);
+    writeText(doc, `${item.youScore}`, MARGIN + 314, compareY, { width: 22, size: 7.5, color, align: 'right' });
+    writeText(doc, `${item.peerScore}`, MARGIN + 466, compareY, { width: 22, size: 7.5, color: C.soft, align: 'right' });
+    compareY += 24;
+  });
+  y += comparePanelH + 12;
+  const compareSummary = `${strongest.name} is outperforming peer averages, while ${delegationComp.name.toLowerCase()} is the clearest place to close the gap with more senior leaders.`;
+  const compareSummaryH = measure(doc, compareSummary, CONTENT_W - 36, 9.5) + 34;
+  panel(doc, MARGIN, y, CONTENT_W, compareSummaryH, '#0c140c', '#86efac44', 14);
+  writeText(doc, compareSummary, MARGIN + 18, y + 16, {
+    width: CONTENT_W - 36,
+    size: 9.5,
+    color: C.green,
+    font: 'Helvetica-Bold',
+    lineGap: 2,
+  });
+  y += compareSummaryH + 18;
+  y = drawDivider(doc, y);
 
+  // Page 9
+  y = pageHeader(doc, 9, 'Leadership Evolution Path', 'The mindset shifts required as you move from competent manager to trusted strategic leader.', y);
+  const stairPanelH = 188;
+  panel(doc, MARGIN, y, CONTENT_W, stairPanelH, C.panel, C.stroke, 16);
+  drawEvolutionSteps(doc, MARGIN + 18, y + 18, CONTENT_W - 36, 112, stageCards.map((item) => item.name), currentStep);
+  let stageInfoY = y + 142;
+  const stageW = (CONTENT_W - 36) / 5;
+  stageCards.forEach((item, index) => {
+    writeLabel(doc, item.name, MARGIN + 10 + index * stageW, stageInfoY, index + 1 === currentStep ? C.green : C.faint);
+    writeText(doc, item.shift, MARGIN + 10 + index * stageW, stageInfoY + 12, {
+      width: stageW - 8,
+      size: 6.8,
+      color: index + 1 === currentStep ? C.soft : C.faint,
+      lineGap: 1.5,
+    });
+  });
+  y += stairPanelH + 16;
+  const shiftText = `You are here: ${shortStageLabel(stageDisplay)}. The next meaningful shift is moving from reliable personal throughput to scalable influence, systems, and leadership leverage.`;
+  const shiftH = measure(doc, shiftText, CONTENT_W - 36, 9.5) + 34;
+  panel(doc, MARGIN, y, CONTENT_W, shiftH, '#0f1014', C.strokeSoft, 14);
+  writeText(doc, shiftText, MARGIN + 18, y + 16, {
+    width: CONTENT_W - 36,
+    size: 9.5,
+    color: C.soft,
+    lineGap: 2.4,
+  });
+  y += shiftH + 18;
+  y = drawDivider(doc, y);
+
+  // Page 10
+  y = pageHeader(doc, 10, 'Final Reflection & Call to Action', 'Respect compounds when your leadership creates leverage beyond your own effort.', y);
+  const ctaHeroH = 96;
+  panel(doc, MARGIN, y, CONTENT_W, ctaHeroH, '#0c140c', '#86efac44', 16);
+  writeLabel(doc, 'Your Next Leadership Move', MARGIN + 20, y + 16, C.green);
+  writeText(doc, 'The difference between a strong manager and a respected leader is leverage.', MARGIN + 20, y + 30, {
+    width: CONTENT_W - 40,
+    size: 16,
+    font: 'Helvetica-Bold',
+    color: C.green,
+    lineGap: 1,
+  });
+  y += ctaHeroH + 14;
+
+  const ctaW = (CONTENT_W - 24) / 3;
+  [
+    { label: 'Join leadership cohort', value: 'Build accountability and practice with a peer group.' },
+    { label: 'Book 1:1 diagnostic session', value: 'Translate this report into a sharper leadership plan.' },
+    { label: 'Start advanced delegation module', value: 'Upgrade ownership transfer, not just task assignment.' },
+  ].forEach((item, index) => {
+    const x = MARGIN + index * (ctaW + 12);
+    panel(doc, x, y, ctaW, 92, C.panel, C.stroke, 14);
+    writeLabel(doc, `Action ${index + 1}`, x + 14, y + 14, C.green);
+    writeText(doc, item.label, x + 14, y + 28, {
+      width: ctaW - 28,
+      size: 9.5,
+      font: 'Helvetica-Bold',
+      color: C.text,
+      lineGap: 2,
+    });
+    writeText(doc, item.value, x + 14, y + 56, {
+      width: ctaW - 28,
+      size: 7.8,
+      color: C.soft,
+      lineGap: 2,
+    });
+  });
+  y += 110;
+
+  const scriptH = measure(doc, scriptText, CONTENT_W - 36, 9.5) + 40;
+  panel(doc, MARGIN, y, CONTENT_W, scriptH, C.panel, C.stroke, 14);
+  writeLabel(doc, 'Leadership Reflection', MARGIN + 18, y + 14, C.faint);
+  writeText(doc, scriptText, MARGIN + 18, y + 28, {
+    width: CONTENT_W - 36,
+    size: 9.5,
+    color: C.muted,
+    lineGap: 2.4,
+  });
+  y += scriptH + 16;
+
+  // Page 11
+  y = pageHeader(doc, 11, 'Mission Control Dashboard', 'Operating rhythms and scorecards that keep your growth visible after the assessment.', y);
   const cadenceW = (CONTENT_W - 24) / 3;
-  const cadences = [
-    { label: 'Daily',   items: dailyCadence.length   ? dailyCadence   : ['15-min priorities check', 'One coaching touchpoint', 'Clear blockers from yesterday'] },
-    { label: 'Weekly',  items: weeklyCadence.length  ? weeklyCadence  : ['Team sync', 'Stakeholder update', 'OKR progress check'] },
-    { label: 'Monthly', items: monthlyCadence.length ? monthlyCadence : ['Strategic reflection', 'Development review', 'Executive summary'] },
+  const cadenceGroups = [
+    { label: 'Daily', items: dailyCadence },
+    { label: 'Weekly', items: weeklyCadence },
+    { label: 'Monthly', items: monthlyCadence },
   ];
-  const maxCadH = Math.max(...cadences.map((c) =>
-    40 + c.items.reduce((s, item) => s + measure(doc, item, cadenceW - 28, 8.5) + 6, 0)
-  ));
-  for (let i = 0; i < cadences.length; i++) {
-    const cx = MARGIN + i * (cadenceW + 12);
-    rPanel(doc, cx, y, cadenceW, maxCadH, C.panel, C.stroke, 12);
-    writeLabel(doc, cadences[i].label, cx + 14, y + 12, C.green);
-    drawBulletList(doc, cadences[i].items, cx + 14, y + 26, cadenceW - 28, {
-      bullet: '•', size: 8.5, color: C.soft, bulletColor: C.green, gap: 5,
+  const cadenceH = Math.max(...cadenceGroups.map((group) => 42 + group.items.reduce((sum, item) => sum + measure(doc, item, cadenceW - 28, 8.5) + 6, 0)));
+  cadenceGroups.forEach((group, index) => {
+    const x = MARGIN + index * (cadenceW + 12);
+    panel(doc, x, y, cadenceW, cadenceH, C.panel, C.stroke, 14);
+    writeLabel(doc, group.label, x + 14, y + 14, C.green);
+    drawBulletList(doc, group.items, x + 14, y + 28, cadenceW - 28, {
+      bullet: '•',
+      size: 8.5,
+      color: C.soft,
+      bulletColor: C.green,
+      gap: 5,
     });
-  }
-  y += maxCadH + 16;
+  });
+  y += cadenceH + 16;
 
-  // KPI row with bar chart
-  if (kpis.length > 0) {
-    const kpiPanelH = 42 + kpis.length * 26;
-    rPanel(doc, MARGIN, y, CONTENT_W, kpiPanelH, C.panel, C.stroke, 12);
-    writeLabel(doc, 'Weekly Leadership KPIs', MARGIN + 16, y + 14, C.green);
-    let kpiY = y + 30;
-    const kpiColors = [C.green, C.blue, C.amber, C.purple, C.green, C.blue, C.amber];
-    for (let i = 0; i < kpis.length; i++) {
-      const score = 40 + ((i * 13 + 7) % 52);
-      const color = kpiColors[i % kpiColors.length];
-      writeText(doc, safeText(kpis[i]), MARGIN + 16, kpiY, { width: CONTENT_W - 132, size: 8.5, color: C.soft });
-      drawProgressBar(doc, PAGE_W - MARGIN - 98, kpiY + 4, 82, score, color, 5);
-      doc.font('Helvetica-Bold').fontSize(7.5).fillColor(color)
-         .text(`${score}%`, PAGE_W - MARGIN - 98 + 82 + 5, kpiY + 3, { lineBreak: false });
-      kpiY += 26;
-    }
-    y += kpiPanelH + 16;
-  }
-
-  // Stakeholder playbook
-  const spH = 42 + stakeholderPlay.reduce((s, item) => s + measure(doc, item, CONTENT_W - 36, 8.5) + 6, 0);
-  if (stakeholderPlay.length > 0) {
-    rPanel(doc, MARGIN, y, CONTENT_W, spH, '#0d0d10', C.stroke, 12);
-    writeLabel(doc, 'Stakeholder Playbook', MARGIN + 16, y + 14, C.green);
-    drawBulletList(doc, stakeholderPlay, MARGIN + 16, y + 28, CONTENT_W - 32, {
-      bullet: '→', size: 8.5, color: C.soft, bulletColor: C.accent, gap: 5,
+  const dashboardH = 178;
+  const dashboardLeftW = CONTENT_W * 0.46;
+  const dashboardRightW = CONTENT_W - dashboardLeftW - 14;
+  panel(doc, MARGIN, y, dashboardLeftW, dashboardH, C.panel, C.stroke, 14);
+  writeLabel(doc, 'Weekly KPIs', MARGIN + 16, y + 14, C.faint);
+  let kpiY = y + 30;
+  kpis.slice(0, 6).forEach((item, index) => {
+    const color = [C.green, C.blue, C.amber, C.purple, C.green, C.blue][index % 6];
+    const kpiScore = clamp(44 + (index * 11 % 46), 0, 100);
+    writeText(doc, item, MARGIN + 16, kpiY, {
+      width: dashboardLeftW - 120,
+      size: 8,
+      color: C.soft,
     });
-    y += spH + 16;
-  }
-
+    drawProgressBar(doc, MARGIN + dashboardLeftW - 88, kpiY + 4, 64, kpiScore, color, 5);
+    writeText(doc, `${kpiScore}%`, MARGIN + dashboardLeftW - 20, kpiY, {
+      width: 18,
+      size: 7,
+      color,
+      align: 'right',
+    });
+    kpiY += 24;
+  });
+  panel(doc, MARGIN + dashboardLeftW + 14, y, dashboardRightW, dashboardH, C.panel, C.stroke, 14);
+  writeLabel(doc, 'Momentum Index', MARGIN + dashboardLeftW + 30, y + 14, C.faint);
+  drawKpiBarChart(doc, MARGIN + dashboardLeftW + 30, y + 34, dashboardRightW - 52, 92, competencies.map((item) => item.name));
+  writeText(doc, 'Use this dashboard weekly. It turns growth from a motivational concept into an operating system.', MARGIN + dashboardLeftW + 30, y + 136, {
+    width: dashboardRightW - 44,
+    size: 8.5,
+    color: C.soft,
+    lineGap: 2,
+  });
+  y += dashboardH + 18;
   y = drawDivider(doc, y);
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // FIRST 7-DAY SPRINT (day cards)
-  // ────────────────────────────────────────────────────────────────────────────
-  y = sectionHeader(doc, 'Execution Layer', 'First 7-Day Sprint',
-    'Seven sequenced actions — one per day — to build immediate momentum. Execute in order.', y);
+  // Page 12
+  y = pageHeader(doc, 12, 'Stakeholder Influence Map & 7-Day Launch Sequence', 'Who to influence first and what to do in the first week to shift behaviour fast.', y);
+  const stakeholderH = 42 + stakeholderPlay.reduce((sum, item) => sum + measure(doc, item, CONTENT_W - 36, 8.5) + 6, 0);
+  panel(doc, MARGIN, y, CONTENT_W, stakeholderH, C.panel, C.stroke, 14);
+  writeLabel(doc, 'Stakeholder Influence Map', MARGIN + 16, y + 14, C.green);
+  drawBulletList(doc, stakeholderPlay, MARGIN + 16, y + 28, CONTENT_W - 32, {
+    bullet: '→',
+    size: 8.5,
+    color: C.soft,
+    bulletColor: C.accent,
+    gap: 5,
+  });
+  y += stakeholderH + 16;
 
-  const numDays = Math.min(firstWeekPlan.length, 7);
-  if (numDays > 0) {
-    const dayW   = (CONTENT_W - (numDays - 1) * 7) / numDays;
-    const dayH   = 106;
-    for (let i = 0; i < numDays; i++) {
-      const dx = MARGIN + i * (dayW + 7);
-      rPanel(doc, dx, y, dayW, dayH, '#0d0d10', C.stroke, 10);
-      // Day accent line at top
-      doc.save().rect(dx, y, dayW, 3).fill(C.green).restore();
-      writeLabel(doc, `Day ${i + 1}`, dx + 8, y + 10, C.green);
-      writeText(doc, safeText(firstWeekPlan[i]), dx + 8, y + 24, {
-        width: dayW - 16, size: 7.5, color: C.soft, lineGap: 2,
+  const days = firstWeekPlan.slice(0, 7);
+  const dayW = (CONTENT_W - 18) / 4;
+  const topRowCount = Math.min(days.length, 4);
+  for (let i = 0; i < topRowCount; i += 1) {
+    const x = MARGIN + i * (dayW + 6);
+    panel(doc, x, y, dayW, 98, '#0f0f12', C.strokeSoft, 12);
+    doc.save().rect(x, y, dayW, 3).fill(C.green).restore();
+    writeLabel(doc, `Day ${i + 1}`, x + 10, y + 10, C.green);
+    writeText(doc, days[i], x + 10, y + 24, {
+      width: dayW - 18,
+      size: 7.5,
+      color: C.soft,
+      lineGap: 2,
+    });
+  }
+  y += 108;
+  const bottomRowCount = Math.max(0, days.length - 4);
+  if (bottomRowCount > 0) {
+    const bottomW = (CONTENT_W - (bottomRowCount - 1) * 6) / bottomRowCount;
+    for (let i = 0; i < bottomRowCount; i += 1) {
+      const x = MARGIN + i * (bottomW + 6);
+      panel(doc, x, y, bottomW, 96, '#0f0f12', C.strokeSoft, 12);
+      doc.save().rect(x, y, bottomW, 3).fill(C.blue).restore();
+      writeLabel(doc, `Day ${i + 5}`, x + 10, y + 10, C.blue);
+      writeText(doc, days[i + 4], x + 10, y + 24, {
+        width: bottomW - 18,
+        size: 7.5,
+        color: C.soft,
+        lineGap: 2,
       });
     }
-    y += dayH + 22;
+    y += 106;
   }
-
+  y += 10;
   y = drawDivider(doc, y);
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // CLOSE — communication template + projected outcome
-  // ────────────────────────────────────────────────────────────────────────────
-  y = sectionHeader(doc, 'Close-Out', 'Communication Template and Projected Outcome',
-    'A ready-to-send executive update and a projection of what changes if you execute this plan over 90 days.', y);
+  // Page 13
+  y = pageHeader(doc, 13, 'Leadership Signals to Watch', 'The behavioural evidence that tells you this report is becoming reality.', y);
+  const signalCards = [
+    {
+      title: 'Respect Signal 01',
+      body: 'Your team asks better questions instead of waiting for direct answers because ownership is becoming clearer.',
+    },
+    {
+      title: 'Respect Signal 02',
+      body: 'Stakeholders describe your updates as strategic, not just operational.',
+    },
+    {
+      title: 'Respect Signal 03',
+      body: 'You spend less time rescuing projects and more time improving the system around them.',
+    },
+    {
+      title: 'Respect Signal 04',
+      body: 'You can step out of the work for a day and momentum does not collapse.',
+    },
+  ];
+  const signalW = (CONTENT_W - 12) / 2;
+  signalCards.forEach((item, index) => {
+    const x = MARGIN + (index % 2) * (signalW + 12);
+    const cardY = y + Math.floor(index / 2) * 98;
+    panel(doc, x, cardY, signalW, 86, C.panel, C.stroke, 14);
+    writeLabel(doc, item.title, x + 14, cardY + 14, index % 2 === 0 ? C.green : C.blue);
+    writeText(doc, item.body, x + 14, cardY + 28, {
+      width: signalW - 28,
+      size: 8.5,
+      color: C.soft,
+      lineGap: 2.2,
+    });
+  });
+  y += 204;
 
-  const scriptText = safeText(analysis.communicationScript, 'This month we made targeted progress on our operating cadence and strategic visibility. Risks are tracked, decisions are cleaner, and the team is moving with more autonomy. Our focus over the next four weeks is strengthening stakeholder confidence and protecting strategic thinking time.');
-  const scriptH    = measure(doc, scriptText, CONTENT_W - 36, 10) + 50;
-  rPanel(doc, MARGIN, y, CONTENT_W, scriptH, C.panel, C.stroke, 12);
-  writeLabel(doc, 'Executive Update Template — Copy-Paste Ready', MARGIN + 18, y + 14, C.green);
-  writeText(doc, scriptText, MARGIN + 18, y + 28, { width: CONTENT_W - 36, size: 10, color: C.muted, lineGap: 3 });
-  y += scriptH + 14;
+  const finalPrompt = 'Use this report as an operating document, not a one-time read. Revisit it weekly, score your behaviour honestly, and update the system around you until leverage becomes the default.';
+  const finalPromptH = measure(doc, finalPrompt, CONTENT_W - 36, 10) + 38;
+  panel(doc, MARGIN, y, CONTENT_W, finalPromptH, '#0c140c', '#86efac44', 14);
+  writeLabel(doc, 'Final Prompt', MARGIN + 18, y + 14, C.green);
+  writeText(doc, finalPrompt, MARGIN + 18, y + 28, {
+    width: CONTENT_W - 36,
+    size: 10,
+    color: C.green,
+    font: 'Helvetica-Bold',
+    lineGap: 2.4,
+  });
+  y += finalPromptH + 18;
 
-  const outcomeText = safeText(analysis.ninetyDayOutcome, 'Consistent execution of this plan should shift your role from problem-solver to force multiplier. Your team will operate with more autonomy, your strategic visibility will grow, and your leadership will be experienced as steadier, more intentional, and more scalable. Stakeholders will describe you as someone who creates leverage — not someone who carries load.');
-  const outcomeH    = measure(doc, outcomeText, CONTENT_W - 36, 10) + 50;
-  rPanel(doc, MARGIN, y, CONTENT_W, outcomeH, '#0c140c', '#86efac44', 12);
-  doc.save().rect(MARGIN, y, 3, outcomeH).fill(C.green).restore();
-  writeLabel(doc, 'Projected 90-Day Outcome', MARGIN + 18, y + 14, C.green);
-  writeText(doc, outcomeText, MARGIN + 18, y + 28, { width: CONTENT_W - 36, size: 10, color: C.muted, lineGap: 3 });
+  const outcomeH = measure(doc, outcomeText, CONTENT_W - 36, 9.5) + 40;
+  panel(doc, MARGIN, y, CONTENT_W, outcomeH, C.panel, C.stroke, 14);
+  writeLabel(doc, 'Projected 90-Day Outcome', MARGIN + 18, y + 14, C.faint);
+  writeText(doc, outcomeText, MARGIN + 18, y + 28, {
+    width: CONTENT_W - 36,
+    size: 9.5,
+    color: C.muted,
+    lineGap: 2.4,
+  });
   y += outcomeH + 24;
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // FOOTER
-  // ────────────────────────────────────────────────────────────────────────────
   doc.save().rect(MARGIN, y, CONTENT_W, 0.75).fill(C.stroke).restore();
   y += 10;
-  doc.font('Helvetica').fontSize(7.5).fillColor(C.faint)
-     .text(`CAREERA · Leadership Readiness Report · ${date} · Confidential`, MARGIN, y, {
-       width: CONTENT_W, align: 'center', lineBreak: false,
-     });
+  doc.font('Helvetica').fontSize(7.5).fillColor(C.faint).text(`CAREERA · Leadership Growth Report · ${assessmentDate} · Confidential`, MARGIN, y, {
+    width: CONTENT_W,
+    align: 'center',
+    lineBreak: false,
+  });
 
   return y + 36;
 }
