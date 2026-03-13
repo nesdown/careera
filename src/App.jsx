@@ -5,6 +5,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfUse from "./pages/TermsOfUse";
 import Success from "./pages/Success";
 import Waitlist from "./pages/Waitlist";
+import AdminWaitlist from "./pages/AdminWaitlist";
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/terms" element={<TermsOfUse />} />
         <Route path="/success" element={<Success />} />
         <Route path="/waitlist" element={<Waitlist />} />
+        <Route path="/admin/waitlist" element={<AdminWaitlist />} />
       </Routes>
     </BrowserRouter>
   );
