@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { generatePdfBuffer } from './reportPdf.js';
 import { dirname, join } from 'path';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
+import nodemailer from 'nodemailer';
 
 dotenv.config();
 
@@ -751,7 +752,75 @@ function writeWaitlist(entries) {
   }
 }
 
-app.post('/api/waitlist', (req, res) => {
+// ─── Email transport (Gmail App Password or any SMTP) ─────────────────────────
+// Set these env vars in Digital Ocean:
+//   SMTP_USER     — your Gmail address   e.g. you@gmail.com
+//   SMTP_PASS     — Gmail App Password   (16-char, generated at myaccount.google.com/apppasswords)
+//   NOTIFY_EMAIL  — where to send alerts (can be same as SMTP_USER)
+function buildMailer() {
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!user || !pass) return null;
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user, pass },
+  });
+}
+const mailer = buildMailer();
+
+async function sendWaitlistNotification(entry, position) {
+  if (!mailer) return; // env vars not set — silent skip
+  const to = process.env.NOTIFY_EMAIL || process.env.SMTP_USER;
+  try {
+    await mailer.sendMail({
+      from: `"Careera Waitlist" <${process.env.SMTP_USER}>`,
+      to,
+      subject: `New waitlist signup #${position}: ${entry.email}`,
+      text: [
+        `New waitlist signup received.`,
+        ``,
+        `Position : #${position}`,
+        `Email    : ${entry.email}`,
+        `Time     : ${new Date(entry.signedUpAt).toLocaleString('en-GB', { timeZone: 'UTC' })} UTC`,
+        ``,
+        `View all signups at: https://careera.cc/admin/waitlist`,
+      ].join('\n'),
+      html: `
+        <div style="font-family:monospace;background:#09090b;color:#d4d4d8;padding:24px;border-radius:12px;max-width:480px">
+          <p style="color:#86efac;font-size:12px;letter-spacing:0.1em;margin:0 0 16px">CAREERA · WAITLIST NOTIFICATION</p>
+          <h2 style="color:#fafafa;margin:0 0 20px;font-size:20px">New signup #${position}</h2>
+          <table style="width:100%;border-collapse:collapse">
+            <tr><td style="color:#71717a;padding:6px 0;width:80px">Email</td><td style="color:#fafafa">${entry.email}</td></tr>
+            <tr><td style="color:#71717a;padding:6px 0">Position</td><td style="color:#86efac">#${position}</td></tr>
+            <tr><td style="color:#71717a;padding:6px 0">Time</td><td style="color:#fafafa">${new Date(entry.signedUpAt).toLocaleString('en-GB', { timeZone: 'UTC' })} UTC</td></tr>
+          </table>
+          <p style="margin:20px 0 0"><a href="https://careera.cc/admin/waitlist" style="color:#86efac">View all signups →</a></p>
+        </div>
+      `,
+    });
+    console.log(`[waitlist] Notification email sent for #${position}: ${entry.email}`);
+  } catch (err) {
+    // Email failure must never break the signup flow
+    console.error('[waitlist] Email notification failed (non-fatal):', err.message);
+  }
+}
+
+// On startup: re-log the full waitlist to stdout so Digital Ocean logs always
+// contain the complete list, even after a fresh deployment wiped the file.
+function logExistingWaitlist() {
+  const entries = readWaitlist();
+  if (entries.length === 0) {
+    console.log('[waitlist] No existing entries on disk.');
+    return;
+  }
+  console.log(`[waitlist] Startup — ${entries.length} existing entr${entries.length === 1 ? 'y' : 'ies'} on disk:`);
+  entries.forEach((e, i) => {
+    console.log(`[waitlist]   #${String(i + 1).padStart(4, '0')}  ${e.email}  (${e.signedUpAt || 'unknown date'})`);
+  });
+}
+logExistingWaitlist();
+
+app.post('/api/waitlist', async (req, res) => {
   try {
     const raw = (typeof req.body?.email === 'string' ? req.body.email : '');
     const email = raw.toLowerCase().trim();
@@ -769,8 +838,11 @@ app.post('/api/waitlist', (req, res) => {
     entries.push(entry);
     writeWaitlist(entries);
 
-    // Log to stdout so Digital Ocean captures it as a backup
-    console.log(`[waitlist] New signup #${entries.length}: ${email}`);
+    // Always log — Digital Ocean retains logs even after redeployments
+    console.log(`[waitlist] New signup #${entries.length}: ${entry.email}  at ${entry.signedUpAt}`);
+
+    // Send email notification (non-blocking — runs in background)
+    sendWaitlistNotification(entry, entries.length);
 
     return res.json({ success: true, alreadyRegistered: false, position: entries.length });
   } catch (err) {
