@@ -168,21 +168,16 @@ const SLIDES = [
   },
 ];
 
-// ── Animation variants ────────────────────────────────────────────────────────
-const slideVariants = {
-  enter: (dir) => ({ opacity: 0, y: dir > 0 ? 36 : -36 }),
-  center: { opacity: 1, y: 0, transition: { duration: 0.48, ease: [0.22, 1, 0.36, 1] } },
-  exit: (dir) => ({ opacity: 0, y: dir > 0 ? -24 : 24, transition: { duration: 0.28, ease: [0.4, 0, 1, 1] } }),
-};
+// ── Slide transition helpers (inline props, avoids function-variant edge cases) ─
 
 const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } },
+  hidden: { opacity: 1 },
+  show: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
 };
 
 const item = {
-  hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
 };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -679,14 +674,13 @@ export default function LaunchParty() {
       {/* ── Slide content ──────────────────────────────────── */}
       <div className="absolute inset-0 flex items-center justify-center pt-12 sm:pt-14 pb-16">
         <div className="w-full max-w-4xl px-5 sm:px-10 overflow-y-auto max-h-full py-6 sm:py-8">
-          <AnimatePresence mode="wait" custom={dir}>
+          <AnimatePresence mode="wait">
             <motion.div
               key={cur}
-              custom={dir}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
+              initial={{ opacity: 0, y: dir > 0 ? 32 : -32 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: dir > 0 ? -20 : 20 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               className="w-full"
             >
               {renderSlide(slide, pollState)}
