@@ -318,6 +318,104 @@ function drawKpiBarChart(doc, x, y, w, h, labels) {
   }
 }
 
+// ─── Chart: grouped horizontal comparison bar (you vs peer) ──────────────────
+function drawGroupedBar(doc, x, y, label, youScore, peerScore, barW, youColor) {
+  const ROW = 18;
+  writeText(doc, label, x, y + 2, { width: 130, size: 7.5, font: 'Helvetica-Bold', color: C.text });
+  // you bar
+  doc.save().roundedRect(x + 134, y, barW, 7, 3).fill(C.strokeSoft).restore();
+  doc.save().roundedRect(x + 134, y, (youScore / 100) * barW, 7, 3).fill(youColor).restore();
+  // peer bar
+  doc.save().roundedRect(x + 134, y + 9, barW, 7, 3).fill(C.strokeSoft).restore();
+  doc.save().roundedRect(x + 134, y + 9, (peerScore / 100) * barW, 7, 3).fill('#ffffff30').restore();
+  // score labels
+  doc.font('Helvetica-Bold').fontSize(7).fillColor(youColor)
+     .text(`${youScore}`, x + 134 + barW + 5, y, { lineBreak: false });
+  doc.font('Helvetica').fontSize(7).fillColor(C.faint)
+     .text(`${peerScore}`, x + 134 + barW + 5, y + 9, { lineBreak: false });
+  return y + ROW + 4;
+}
+
+// ─── Chart: visual score dial (large, decorative) ──────────────────────────
+function drawScoreDial(doc, cx, cy, r, score, color) {
+  // Outer glow
+  doc.save().circle(cx, cy, r + 10).fillOpacity(0.03).fill(color).restore();
+  doc.save().circle(cx, cy, r + 5).fillOpacity(0.05).fill(color).restore();
+  // Track
+  doc.save().circle(cx, cy, r).lineWidth(8).strokeColor(C.strokeSoft).stroke().restore();
+  // Arc
+  if (score > 0) {
+    const a0 = -Math.PI / 2;
+    const sweep = (Math.min(score, 99.9) / 100) * Math.PI * 2;
+    doc.save().arc(cx, cy, r, a0, a0 + sweep).lineWidth(8).strokeColor(color).stroke().restore();
+  }
+  // Inner ring decoration
+  doc.save().circle(cx, cy, r - 14).lineWidth(0.5).strokeColor(C.strokeSoft).stroke().restore();
+  // Score text
+  doc.font('Helvetica-Bold').fontSize(r * 0.55).fillColor(C.text)
+     .text(String(score), cx - r * 0.5, cy - r * 0.32, { width: r, align: 'center', lineBreak: false });
+  doc.font('Helvetica').fontSize(8).fillColor(C.soft)
+     .text('/ 100', cx - r * 0.5, cy + r * 0.14, { width: r, align: 'center', lineBreak: false });
+}
+
+// ─── Chart: mini score pill row ───────────────────────────────────────────────
+function drawScorePillRow(doc, x, y, competencies, maxW) {
+  const pillW = (maxW - (competencies.length - 1) * 6) / competencies.length;
+  for (let i = 0; i < competencies.length; i++) {
+    const comp = competencies[i];
+    const color = levelColor(comp.level);
+    const px = x + i * (pillW + 6);
+    rPanel(doc, px, y, pillW, 46, '#0f0f12', C.strokeSoft, 8);
+    // mini arc
+    const gx = px + pillW / 2, gy = y + 22;
+    drawArcGauge(doc, gx, gy, 10, comp.score, color, 3);
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(C.text)
+       .text(String(comp.score), gx - 8, gy - 5, { width: 16, align: 'center', lineBreak: false });
+    writeText(doc, comp.name.split(' ')[0], px + 4, y + 34, { width: pillW - 8, size: 6, color, align: 'center' });
+  }
+  return y + 46 + 8;
+}
+
+// ─── Chart: visual roadmap connector ─────────────────────────────────────────
+function drawRoadmapFlow(doc, x, y, w, months) {
+  const n = months.length;
+  const segW = (w - (n - 1) * 4) / n;
+  for (let i = 0; i < n; i++) {
+    const bx = x + i * (segW + 4);
+    const color = i === 0 ? C.green : i === 1 ? C.blue : C.purple;
+    rPanel(doc, bx, y, segW, 28, '#0f0f12', color, 8);
+    writeLabel(doc, `Month ${i + 1}`, bx + 10, y + 7, color);
+    writeText(doc, safeText(months[i]).slice(0, 20), bx + 10, y + 17, { width: segW - 18, size: 7.5, color: C.text });
+    if (i < n - 1) {
+      const arrowX = bx + segW + 1;
+      doc.save().moveTo(arrowX, y + 14).lineTo(arrowX + 3, y + 14).lineWidth(1).strokeColor(C.stroke).stroke().restore();
+    }
+  }
+  return y + 28 + 8;
+}
+
+// ─── Chart: visual gap bars (growth priority) ────────────────────────────────
+function drawGapBar(doc, x, y, w, score, color, label) {
+  const filled = (score / 100) * w;
+  const gap = ((90 - Math.min(score, 90)) / 100) * w;
+  doc.save().roundedRect(x, y, w, 10, 5).fill(C.strokeSoft).restore();
+  doc.save().roundedRect(x, y, filled, 10, 5).fill(color).restore();
+  if (score < 90) {
+    doc.save().roundedRect(x + filled, y, gap, 10, 0).fillOpacity(0.2).fill(C.red).restore();
+  }
+  // threshold marker at 90
+  const thX = x + (90 / 100) * w;
+  doc.save().rect(thX, y - 2, 1, 14).fill(C.faint).restore();
+  doc.font('Helvetica').fontSize(6).fillColor(C.faint).text('90', thX + 2, y + 2, { lineBreak: false });
+  doc.font('Helvetica-Bold').fontSize(7.5).fillColor(color)
+     .text(`${score}/100`, x, y + 13, { width: 50, lineBreak: false });
+  if (label) {
+    doc.font('Helvetica').fontSize(7).fillColor(C.faint)
+       .text(label, x + w - 60, y + 13, { width: 60, align: 'right', lineBreak: false });
+  }
+  return y + 28;
+}
+
 function drawOrbitalCluster(doc, cx, cy, s = 1) {
   doc.save();
   doc.circle(cx, cy, 72 * s).lineWidth(0.8).strokeOpacity(0.15).strokeColor(C.green).stroke();
@@ -557,21 +655,30 @@ function renderContent(doc, analysis) {
 
   y = safeY(y, scoreCardH, doc.y);
 
-  // 3 stat cards (fixed 72px)
-  const sw3 = (CONTENT_W - 24) / 3;
-  for (const [i, { label, value, sub }] of [
-    { label: 'Leadership Score', value: String(score),              sub: '/ 100 overall' },
-    { label: 'Top Dimension',    value: strongest.name.split(' ')[0], sub: `${strongest.score}/100 · ${strongest.level}` },
-    { label: 'Growth Priority',  value: weakest.name.split(' ')[0],  sub: `${weakest.score}/100 · ${weakest.level}` },
+  // Visual stat row — large score dial + two metric cards
+  const dialSz = 140;
+  rPanel(doc, MARGIN, y, dialSz, dialSz, C.panel, C.stroke, 14);
+  drawScoreDial(doc, MARGIN + dialSz / 2, y + dialSz / 2 - 4, 48, score, C.green);
+  writeLabel(doc, 'Readiness Score', MARGIN + 14, y + dialSz - 22, C.faint);
+
+  const metricW = (CONTENT_W - dialSz - 14 - 12) / 2;
+  for (const [i, { label, value, sub, color }] of [
+    { label: 'Top Strength',    value: strongest.name.split(' ')[0], sub: `${strongest.score}/100 · ${strongest.level}`, color: C.green },
+    { label: 'Growth Priority', value: weakest.name.split(' ')[0],   sub: `${weakest.score}/100 · ${weakest.level}`,   color: C.amber },
   ].entries()) {
-    const x = MARGIN + i * (sw3 + 12);
-    rPanel(doc, x, y, sw3, 72, '#0f0f12', C.strokeSoft, 12);
-    writeLabel(doc, label, x + 14, y + 12, C.faint);
-    doc.font('Helvetica-Bold').fontSize(i === 0 ? 24 : 17).fillColor(i === 0 ? C.green : C.text)
-       .text(value, x + 14, y + 28, { width: sw3 - 28, lineBreak: false });
-    writeText(doc, sub, x + 14, y + 54, { width: sw3 - 28, size: 8, color: C.soft });
+    const x = MARGIN + dialSz + 14 + i * (metricW + 12);
+    rPanel(doc, x, y, metricW, dialSz, '#0f0f12', C.strokeSoft, 12);
+    writeLabel(doc, label, x + 14, y + 14, C.faint);
+    doc.font('Helvetica-Bold').fontSize(17).fillColor(color)
+       .text(value, x + 14, y + 30, { width: metricW - 28, lineBreak: false });
+    writeText(doc, sub, x + 14, y + 54, { width: metricW - 28, size: 8, color: C.soft });
+    // mini arc at bottom of card
+    drawArcGauge(doc, x + metricW / 2, y + dialSz - 28, 16, i === 0 ? strongest.score : weakest.score, color, 4);
   }
-  y += 72 + GAP;
+  y += dialSz + GAP;
+
+  // Competency pill strip — all 6 as tiny visual gauges
+  y = drawScorePillRow(doc, MARGIN, y, comps, CONTENT_W);
 
   y = infoPanel(doc, 'Assessment Context', summary, y);
   y = accentQuote(doc, keyInsight, y);
@@ -614,12 +721,14 @@ function renderContent(doc, analysis) {
   }
   y += rpH + GAP;
 
-  // Growth headline
-  const glH = 52;
+  // Growth headline with visual gap indicator
+  const glH = 72;
   rPanel(doc, MARGIN, y, CONTENT_W, glH, '#0c140c', '#27272a', 12);
   doc.save().rect(MARGIN, y, 3, glH).fill(C.green).restore();
   writeLabel(doc, 'Highest Leverage Growth Area', MARGIN + IP, y + 12, C.green);
-  writeText(doc, `${delComp.name} + ${stratComp.name}`, MARGIN + IP, y + 26, { width: IW, size: 11.5, font: 'Helvetica-Bold', color: C.green });
+  writeText(doc, `${delComp.name} + ${stratComp.name}`, MARGIN + IP, y + 26, { width: IW * 0.6, size: 11, font: 'Helvetica-Bold', color: C.green });
+  // Visual gap bar on right side of this banner
+  drawGapBar(doc, MARGIN + IW * 0.65, y + 18, IW * 0.35, delComp.score, C.green, `${gapToAdvanced(delComp.score)}pts to Advanced`);
   y += glH + GAP;
 
   // 2×3 gauge grid — fixed 90px per card
@@ -813,8 +922,11 @@ function renderContent(doc, analysis) {
   // ════════════════════════════════════════════════════════════════════════════
   y = pageHeader(doc, 7, '90-Day Leadership Roadmap', 'Three months of sequenced action. Execute in order — each month builds what the next requires.', y);
 
+  // Visual flow connector strip
+  y = drawRoadmapFlow(doc, MARGIN, y, CONTENT_W, roadmapCards.map(c => safeText(c.theme, 'Focus')));
+  // Classic timeline below
   const tlEnd = drawTimeline(doc, MARGIN, y, CONTENT_W, roadmapCards.map(c => safeText(c.theme, 'Focus')));
-  y = tlEnd + 16;
+  y = tlEnd + 8;
 
   for (const [idx, card] of roadmapCards.entries()) {
     const actions2 = safeArray(card.actions, []);
@@ -895,20 +1007,20 @@ function renderContent(doc, analysis) {
   }
   y = safeY(y, tableH, doc.y);
 
-  // Visual bars — fixed 22px rows
-  const vizH = 36 + benchItems.length * 22 + HBUF;
+  // Grouped bar comparison — you (colored) above peer (white) per dimension
+  const vizH = 44 + benchItems.length * 26 + HBUF;
   rPanel(doc, MARGIN, y, CONTENT_W, vizH, C.panel, C.stroke, 12);
-  writeLabel(doc, 'Visual Comparison — green bar = you  |  grey bar = peer average', MARGIN + IP, y + 14, C.faint);
+  writeLabel(doc, 'Visual Comparison', MARGIN + IP, y + 14, C.faint);
+  // Legend
+  doc.save().roundedRect(MARGIN + CONTENT_W - 120, y + 11, 10, 6, 3).fill(C.green).restore();
+  doc.font('Helvetica').fontSize(6.5).fillColor(C.soft).text('Your score', MARGIN + CONTENT_W - 106, y + 12, { lineBreak: false });
+  doc.save().roundedRect(MARGIN + CONTENT_W - 54, y + 11, 10, 6, 3).fillOpacity(0.3).fill(C.accent).restore();
+  doc.font('Helvetica').fontSize(6.5).fillColor(C.soft).text('Peer avg', MARGIN + CONTENT_W - 40, y + 12, { lineBreak: false });
+  const vizBarW = CONTENT_W - IP * 2 - 150;
   let vizY = y + 28;
   for (const [i, item] of benchItems.entries()) {
     const color = levelColor(comps[i]?.level || 'Developing');
-    writeText(doc, item.name.split(' ')[0], MARGIN + IP, vizY, { width: 76, size: 8, font: 'Helvetica-Bold', color: C.text });
-    drawProgressBar(doc, MARGIN + IP + 82, vizY + 3, 140, item.youScore, color, 6);
-    drawProgressBar(doc, MARGIN + IP + 234, vizY + 3, 140, item.peerScore, C.strokeSoft, 6);
-    doc.save().roundedRect(MARGIN + IP + 234, vizY + 3, (item.peerScore / 100) * 140, 6, 3).fill('#ffffff50').restore();
-    writeText(doc, `${item.youScore}`, MARGIN + IP + 226, vizY, { width: 18, size: 7.5, color, align: 'right' });
-    writeText(doc, `${item.peerScore}`, MARGIN + IP + 380, vizY, { width: 18, size: 7.5, color: C.soft, align: 'right' });
-    vizY += 22;
+    vizY = drawGroupedBar(doc, MARGIN + IP, vizY, item.name, item.youScore, item.peerScore, vizBarW, color);
   }
   y = safeY(y, vizH, doc.y);
 
@@ -938,7 +1050,7 @@ function renderContent(doc, analysis) {
     writeText(doc, card.shift, MARGIN + 14, y + 26, { width: CONTENT_W - 30, size: 9, color: here ? C.muted : C.faint, lineGap: 2 });
     y = safeY(y, h, doc.y, 8);
   }
-  y += 4;
+      y += 4;
 
   const transText = `The transition from ${stageCards[curStep - 1]?.name || 'Scaling Manager'} to ${stageCards[curStep]?.name || 'Strategic Leader'} is the most commonly underestimated leadership shift. Most leaders at this inflection point try to work harder within the existing model rather than redesigning the model itself. The shift is not about doing more — it is about doing fundamentally different things.`;
   y = infoPanel(doc, 'The Transition You Are Making', transText, y);
@@ -1157,50 +1269,87 @@ function renderContent(doc, analysis) {
   y += 22;
 
   // ════════════════════════════════════════════════════════════════════════════
-  // SECTION 14 — FINAL REFLECTION
+  // SECTION 14 — FINAL REFLECTION (visual, no copy-paste text)
   // ════════════════════════════════════════════════════════════════════════════
-  y = pageHeader(doc, 14, 'Final Reflection & Call to Action', 'Respect compounds when your leadership creates leverage beyond your own direct effort and presence.', y);
+  y = pageHeader(doc, 14, 'Your Leadership Growth Summary', 'A visual snapshot of where you are, where you are going, and the single most important shift to make.', y);
 
+  // Large score dial + outcome narrative side by side
+  const dialPanelH = 220;
+  const dialW = 200, narrativeW = CONTENT_W - dialW - 14;
+  rPanel(doc, MARGIN, y, dialW, dialPanelH, C.panel, C.stroke, 16);
+  drawScoreDial(doc, MARGIN + dialW / 2, y + 96, 60, score, C.green);
+  writeLabel(doc, 'Overall Readiness', MARGIN + 14, y + 170, C.faint);
+  writeText(doc, safeText(analysis.leadershipStage, 'Scaling Manager'), MARGIN + 14, y + 184, { width: dialW - 28, size: 8, color: C.soft, align: 'center' });
+
+  rPanel(doc, MARGIN + dialW + 14, y, narrativeW, dialPanelH, C.panel, C.stroke, 16);
+  writeLabel(doc, 'What This Means', MARGIN + dialW + 28, y + 14, C.faint);
+  writeText(doc, outcome90, MARGIN + dialW + 28, y + 30, { width: narrativeW - 36, size: 9.5, color: C.muted, lineGap: 2.8 });
+  y += dialPanelH + GAP;
+
+  // Visual score summary: all 6 dims as filled bars with peer overlay
+  const scoreSummaryH = 44 + comps.length * 22 + HBUF;
+  rPanel(doc, MARGIN, y, CONTENT_W, scoreSummaryH, C.panel, C.stroke, 14);
+  writeLabel(doc, 'Competency Summary — You vs. Peers', MARGIN + IP, y + 14, C.faint);
+  // Legend
+  doc.save().roundedRect(MARGIN + CONTENT_W - 110, y + 11, 10, 7, 3).fill(C.green).restore();
+  doc.font('Helvetica').fontSize(6.5).fillColor(C.soft).text('You', MARGIN + CONTENT_W - 96, y + 13, { lineBreak: false });
+  doc.save().roundedRect(MARGIN + CONTENT_W - 74, y + 11, 10, 7, 3).fillOpacity(0.3).fill(C.accent).restore();
+  doc.font('Helvetica').fontSize(6.5).fillColor(C.soft).text('Peer avg', MARGIN + CONTENT_W - 60, y + 13, { lineBreak: false });
+  const barAvailW = CONTENT_W - IP * 2 - 140;
+  let sumY = y + 30;
+  for (const [i, comp] of comps.entries()) {
+    const color = levelColor(comp.level);
+    const peer  = peerAvg(comp.score, i);
+    sumY = drawGroupedBar(doc, MARGIN + IP, sumY, comp.name, comp.score, peer, barAvailW, color);
+  }
+  y = safeY(y, scoreSummaryH, doc.y);
+
+  // Key insight quote — visual treatment
   {
-    const h = 88;
-    rPanel(doc, MARGIN, y, CONTENT_W, h, '#0c140c', '#27272a', 14);
-    doc.save().rect(MARGIN, y, 3, h).fill(C.green).restore();
-    writeLabel(doc, 'Your Next Leadership Move', MARGIN + IP, y + 14, C.green);
-    writeText(doc, 'The difference between a strong manager and a respected leader is leverage.', MARGIN + IP, y + 28, { width: IW, size: 14, font: 'Helvetica-Bold', color: C.green, lineGap: 2 });
+    const quoteText = `"${keyInsight}"`;
+    const h = measure(doc, quoteText, IW - 40, 14, 'Helvetica-Bold') + 64 + HBUF;
+    rPanel(doc, MARGIN, y, CONTENT_W, h, '#0c140c', '#27272a', 16);
+    // Large decorative quote mark
+    doc.font('Helvetica-Bold').fontSize(60).fillColor(C.green).fillOpacity(0.12)
+       .text('"', MARGIN + IP, y + 4, { lineBreak: false });
+    doc.fillOpacity(1);
+    writeText(doc, quoteText, MARGIN + IP + 28, y + 24, { width: IW - 40, size: 14, font: 'Helvetica-Bold', color: C.green, lineGap: 3 });
     y = safeY(y, h, doc.y);
   }
 
-  y = infoPanel(doc, 'What Happens If You Execute This Plan', outcome90, y);
-  y = infoPanel(doc, 'Leadership Communication Template — Copy-Paste Ready', commScript, y);
+  // Growth priority visual: top 3 gaps shown as gap bars
+  const gapPanelH = 44 + growthAreas.length * 52 + HBUF;
+  rPanel(doc, MARGIN, y, CONTENT_W, gapPanelH, C.panel, C.stroke, 14);
+  writeLabel(doc, 'Growth Gap Visual — Score vs. Advanced Threshold (90)', MARGIN + IP, y + 14, C.faint);
+  let gpY = y + 30;
+  for (const [i, area] of growthAreas.entries()) {
+    const relComp = comps.find(c => area.title.toLowerCase().split(' ').some(w => c.name.toLowerCase().includes(w)))
+      || weakest;
+    const color = [C.green, C.blue, C.amber][i % 3];
+    writeText(doc, safeText(area.title), MARGIN + IP, gpY, { width: IW, size: 8.5, font: 'Helvetica-Bold', color: C.text });
+    gpY += 14;
+    gpY = drawGapBar(doc, MARGIN + IP, gpY, IW, relComp.score, color, `Gap: ${gapToAdvanced(relComp.score)}pts`);
+    gpY += 6;
+  }
+  y = safeY(y, gapPanelH, doc.y);
 
-  // 3 CTA cards — fixed equal height
-  const ctaData = [
-    { label: 'Join Leadership Cohort',      desc: 'Build peer accountability and accelerated practice in a structured group. Bi-weekly cohort calls with leaders at the same transition stage.',  action: 'Apply at careera.io/cohort' },
-    { label: 'Book 1:1 Diagnostic Session', desc: 'Translate this report into a sharp 90-day growth plan. 90 minutes with a senior leadership advisor tailored to your exact profile.', action: 'Book at careera.io/session' },
-    { label: 'Advanced Delegation Module',  desc: 'A structured 6-week module on delegation that goes beyond technique into the psychology of ownership transfer. Online and self-paced.',   action: 'Start at careera.io/delegation' },
+  // 90-day outcome visual: 3 milestone markers
+  const milestoneH = 96;
+  rPanel(doc, MARGIN, y, CONTENT_W, milestoneH, '#0f0f12', C.stroke, 14);
+  writeLabel(doc, 'Your 90-Day Trajectory', MARGIN + IP, y + 14, C.faint);
+  const milestoneW = (CONTENT_W - IP * 2 - 24) / 3;
+  const milestones = [
+    { label: 'Day 30', color: C.green, text: 'Less personal execution. One process handed off completely.' },
+    { label: 'Day 60', color: C.blue,  text: 'Stakeholders describe updates as strategic. Influence widening.' },
+    { label: 'Day 90', color: C.purple, text: 'Team runs independently. You design systems, not execute tasks.' },
   ];
-  const ctaW3 = (CONTENT_W - 24) / 3;
-  const ctaH3 = Math.max(...ctaData.map(c => measure(doc, c.desc, ctaW3 - 24, 8.5) + 72 + HBUF));
-  for (const [i, { label, desc, action }] of ctaData.entries()) {
-    const x = MARGIN + i * (ctaW3 + 12);
-    rPanel(doc, x, y, ctaW3, ctaH3, C.panel, C.stroke, 14);
-    writeLabel(doc, `Action ${i + 1}`, x + 14, y + 14, C.green);
-    writeText(doc, label, x + 14, y + 28, { width: ctaW3 - 24, size: 10, font: 'Helvetica-Bold', color: C.text });
-    writeText(doc, desc, x + 14, y + 46, { width: ctaW3 - 24, size: 8.5, color: C.soft, lineGap: 2 });
-    writeLabel(doc, action, x + 14, y + ctaH3 - 16, C.faint);
+  for (const [i, { label, color, text }] of milestones.entries()) {
+    const mx = MARGIN + IP + i * (milestoneW + 12);
+    rPanel(doc, mx, y + 28, milestoneW, 58, '#0d0d10', color, 10);
+    writeLabel(doc, label, mx + 10, y + 36, color);
+    writeText(doc, text, mx + 10, y + 50, { width: milestoneW - 18, size: 7.5, color: C.soft, lineGap: 1.8 });
   }
-  y = safeY(y, ctaH3, doc.y);
-
-  // Closing commitment
-  {
-    const closingText = 'Use this report as a living operating document, not a one-time read. Return to it weekly for the first month, monthly for the next two, and quarterly after that. Score your behaviour honestly against the signals described in Section 13. Leadership growth that sticks is built through repeated, conscious practice — not through insight alone. You have a clear map. The work is now in the execution.';
-    const h = measure(doc, closingText, IW, 10) + 48 + HBUF;
-    rPanel(doc, MARGIN, y, CONTENT_W, h, '#0c140c', '#27272a', 14);
-    doc.save().rect(MARGIN, y, 3, h).fill(C.green).restore();
-    writeLabel(doc, 'Your Leadership Operating Commitment', MARGIN + IP, y + 14, C.green);
-    writeText(doc, closingText, MARGIN + IP, y + 30, { width: IW, size: 10, color: C.green, font: 'Helvetica-Bold', lineGap: 2.2 });
-    y = safeY(y, h, doc.y);
-  }
+  y = safeY(y, milestoneH, doc.y);
 
   // Footer
   doc.save().rect(MARGIN, y, CONTENT_W, 0.75).fill(C.stroke).restore();
@@ -1234,7 +1383,7 @@ export function generatePdfBuffer(analysis) {
         drawGrid(doc, docH);
         drawStars(doc, docH);
         renderContent(doc, analysis);
-        doc.end();
+    doc.end();
       }).catch(reject);
     } catch (err) {
       reject(err);
