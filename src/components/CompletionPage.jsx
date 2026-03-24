@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Download, Calendar, CheckCircle } from "lucide-react";
 import { getQuestionnaireVariant } from "../data/questions";
 import Navbar from "./Navbar";
-import CalendlyModal from "./CalendlyModal";
+// CalendlyModal is no longer used here — booking happens on /success after payment
 
 // ─── Console log steps ────────────────────────────────────────────────────────
 const STEPS = [
@@ -315,8 +315,7 @@ function MissionControlConsole({ onComplete, answers }) {
 
 // ─── Completion screen — analysis preview + Stripe paywall ───────────────────
 function ReportReady({ analysis, answers }) {
-  const [showCalendly, setShowCalendly] = useState(false);
-  const [email, setEmail]               = useState("");
+  const [email, setEmail] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError]     = useState("");
 
@@ -513,16 +512,16 @@ function ReportReady({ analysis, answers }) {
                 {checkoutLoading ? "Redirecting to checkout…" : "Download Full Report · $29.99"}
               </motion.button>
 
-              {/* Secondary: book session */}
+              {/* Secondary: book session — goes through Stripe then Calendly */}
               <motion.button
-                onClick={() => setShowCalendly(true)}
+                onClick={() => handlePurchase("report-call")}
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 disabled={checkoutLoading}
                 className="flex items-center justify-center gap-2.5 bg-white/8 border border-white/15 text-white px-5 py-3.5 rounded-full text-sm hover:bg-white/12 transition-colors cursor-pointer disabled:opacity-60"
               >
                 <Calendar className="w-4 h-4" />
-                Book 1:1 Coaching Session · $99.99
+                {checkoutLoading ? "Redirecting…" : "Book Session + Get Report · $99.99"}
               </motion.button>
             </motion.div>
 
@@ -541,7 +540,7 @@ function ReportReady({ analysis, answers }) {
         </div>
       </div>
 
-      <CalendlyModal isOpen={showCalendly} onClose={() => setShowCalendly(false)} />
+      {/* CalendlyModal removed — booking is gated behind /success after payment */}
     </>
   );
 }
