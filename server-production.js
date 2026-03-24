@@ -634,10 +634,10 @@ app.post('/api/create-checkout-session', async (req, res) => {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: 'Leadership Report + Career Boost Call',
-              description: 'Personalized 10-page PDF leadership report + 30-min 1-on-1 strategy call with a leadership coach',
+              name: 'Leadership Report + 1:1 Coaching Session',
+              description: 'Personalised long-form PDF leadership report + 30-min 1-on-1 leadership strategy session',
             },
-            unit_amount: 9700,
+            unit_amount: 9999,
           },
           quantity: 1,
         }]
@@ -645,10 +645,10 @@ app.post('/api/create-checkout-session', async (req, res) => {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: 'Leadership Report',
-              description: 'Personalized 10-page PDF leadership report with AI analysis, competency scores, and 90-day roadmap',
+              name: 'Leadership Growth Report',
+              description: 'Personalised long-form PDF leadership report with AI analysis, 6 competency scores, archetype profile, 90-day roadmap, habits blueprint, and evolution path',
             },
-            unit_amount: 2900,
+            unit_amount: 2999,
           },
           quantity: 1,
         }];

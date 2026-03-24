@@ -313,63 +313,35 @@ function MissionControlConsole({ onComplete, answers }) {
   );
 }
 
-// ─── Completion screen (no report preview) ────────────────────────────────────
-function ReportReady({ analysis, reportData }) {
+// ─── Completion screen — analysis preview + Stripe paywall ───────────────────
+function ReportReady({ analysis, answers }) {
   const [showCalendly, setShowCalendly] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [email, setEmail]               = useState("");
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError]     = useState("");
 
-  const handleDownload = useCallback(() => {
-    if (!reportData?.pdf) return;
-    setIsDownloading(true);
+  const handlePurchase = useCallback(async (plan = "report") => {
+    setCheckoutLoading(true);
+    setCheckoutError("");
     try {
-      const pdfSource = reportData.pdf;
-      const fileName = reportData.filename || "Careera-Leadership-Report.pdf";
-      const isDataUrl = pdfSource.startsWith("data:");
-
-      const isIOS =
-        /iPad|iPhone|iPod/.test(window.navigator.userAgent) ||
-        (window.navigator.platform === "MacIntel" && window.navigator.maxTouchPoints > 1);
-      const isSafari =
-        /^((?!chrome|android).)*safari/i.test(window.navigator.userAgent);
-
-      let objectUrl = pdfSource;
-
-      if (isDataUrl) {
-        const [meta, base64Data = ""] = pdfSource.split(",", 2);
-        const mimeType = meta.match(/^data:(.*?);base64$/)?.[1] || "application/pdf";
-        const binary = window.atob(base64Data);
-        const bytes = new Uint8Array(binary.length);
-
-        for (let i = 0; i < binary.length; i += 1) {
-          bytes[i] = binary.charCodeAt(i);
-        }
-
-        objectUrl = window.URL.createObjectURL(new Blob([bytes], { type: mimeType }));
-      }
-
-      if (isIOS || isSafari) {
-        const opened = window.open(objectUrl, "_blank", "noopener,noreferrer");
-        if (!opened) {
-          window.location.href = objectUrl;
-        }
+      const variant = getQuestionnaireVariant();
+      const res = await fetch("/api/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers, variant, email: email.trim(), plan }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
       } else {
-        const link = document.createElement("a");
-        link.href = objectUrl;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        setCheckoutError("Could not start checkout. Please try again.");
       }
-
-      if (objectUrl !== pdfSource) {
-        window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60000);
-      }
+    } catch {
+      setCheckoutError("Connection error. Please try again.");
     } finally {
-      window.setTimeout(() => setIsDownloading(false), 800);
+      setCheckoutLoading(false);
     }
-  }, [reportData]);
-
-  const sorted = [...analysis.competencies].sort((a, b) => b.score - a.score);
+  }, [answers, email]);
 
   return (
     <>
@@ -428,23 +400,23 @@ function ReportReady({ analysis, reportData }) {
               className="text-center mb-8"
             >
               <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 leading-tight">
-                Your Report Is Ready
+                Your Analysis Is Complete
               </h1>
               <p className="text-sm text-zinc-500">
-                Long-form personalised leadership PDF · {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                Leadership readiness score · {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
               </p>
             </motion.div>
 
-            {/* Score snapshot */}
+            {/* Score snapshot — free preview */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 mb-6"
+              className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5 mb-5"
             >
               <div className="flex items-center justify-between mb-4">
-                <span className="text-[10px] font-mono text-zinc-600 tracking-widest uppercase">Report Overview</span>
-                <span className="text-xs font-mono text-zinc-400">{analysis.leadershipScore}/100</span>
+                <span className="text-[10px] font-mono text-zinc-600 tracking-widest uppercase">Score Preview</span>
+                <span className="text-base font-bold text-white">{analysis.leadershipScore}<span className="text-zinc-600 text-xs font-normal">/100</span></span>
               </div>
               <div className="space-y-2.5">
                 {analysis.competencies.map((c) => (
@@ -464,68 +436,93 @@ function ReportReady({ analysis, reportData }) {
               </div>
             </motion.div>
 
-            {/* What's inside checklist */}
+            {/* What's inside the full report */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.35 }}
-              className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-2 mb-8"
+              transition={{ delay: 0.3 }}
+              className="bg-zinc-900/30 border border-zinc-800/60 rounded-2xl p-4 mb-6"
             >
-              {[
-                "Executive summary",
-                "6 competency scores",
-                "Leadership archetype",
-                "3 growth areas",
-                "90-day roadmap",
-                "First 7-day sprint",
-                "Stakeholder playbook",
-                "Weekly KPIs",
-              ].map((item) => (
-                <div key={item} className="flex items-center gap-2 text-xs text-zinc-500">
-                  <CheckCircle className="w-3 h-3 text-zinc-700 shrink-0" />
-                  {item}
-                </div>
-              ))}
+              <p className="text-[10px] font-mono text-zinc-600 tracking-widest uppercase mb-3">What's in your full report</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                {[
+                  "Executive summary & context",
+                  "Competency intelligence cards",
+                  "Leadership archetype deep-dive",
+                  "Top 3 growth gaps + actions",
+                  "90-day month-by-month roadmap",
+                  "Benchmark vs. peer leaders",
+                  "Evolution path & mindset shifts",
+                  "12-habit behaviour blueprint",
+                  "7-day sprint plan",
+                  "Leadership signals to track",
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-2 text-xs text-zinc-500">
+                    <CheckCircle className="w-3 h-3 text-zinc-700 shrink-0" />
+                    {item}
+                  </div>
+                ))}
+              </div>
             </motion.div>
+
+            {/* Email input for Stripe */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.38 }}
+              className="mb-3"
+            >
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Your email (for receipt & re-download)"
+                className="w-full bg-zinc-900/60 border border-zinc-700/60 rounded-xl px-4 py-3 text-white text-sm
+                           placeholder-zinc-600 outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500/20 transition-all"
+              />
+            </motion.div>
+
+            {checkoutError && (
+              <p className="text-red-400 text-xs font-mono mb-3 px-1">⚠ {checkoutError}</p>
+            )}
 
             {/* CTA buttons */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.45 }}
-              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+              className="flex flex-col gap-3"
             >
-              {/* Download */}
+              {/* Primary: pay for report */}
               <motion.button
-                onClick={handleDownload}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                disabled={!reportData?.pdf || isDownloading}
-                className="flex items-center justify-center gap-2.5 bg-white/10 border border-white/20 text-white px-5 py-4 rounded-full font-semibold text-sm hover:bg-white/15 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download className="w-4 h-4" />
-                {isDownloading ? "Preparing download..." : "Download PDF"}
-                <span className="text-zinc-500 text-xs">· $29.99</span>
-              </motion.button>
-
-              {/* Book session */}
-              <motion.button
-                onClick={() => setShowCalendly(true)}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
+                onClick={() => handlePurchase("report")}
+                whileHover={{ scale: 1.015 }}
+                whileTap={{ scale: 0.975 }}
+                disabled={checkoutLoading}
                 animate={{
-                  boxShadow: [
-                    "0 4px 24px rgba(255,255,255,0.05)",
-                    "0 4px 44px rgba(255,255,255,0.15)",
-                    "0 4px 24px rgba(255,255,255,0.05)",
+                  boxShadow: checkoutLoading ? undefined : [
+                    "0 0 0px rgba(255,255,255,0)",
+                    "0 0 32px rgba(255,255,255,0.12)",
+                    "0 0 0px rgba(255,255,255,0)",
                   ],
                 }}
-                transition={{ duration: 2.5, repeat: Infinity }}
-                className="flex items-center justify-center gap-2.5 bg-white text-black px-5 py-4 rounded-full font-semibold text-sm hover:bg-zinc-100 transition-colors cursor-pointer"
+                transition={{ duration: 2.8, repeat: Infinity }}
+                className="flex items-center justify-center gap-2.5 bg-white text-black px-5 py-4 rounded-full font-semibold text-sm hover:bg-zinc-100 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <Download className="w-4 h-4" />
+                {checkoutLoading ? "Redirecting to checkout…" : "Download Full Report · $29.99"}
+              </motion.button>
+
+              {/* Secondary: book session */}
+              <motion.button
+                onClick={() => setShowCalendly(true)}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                disabled={checkoutLoading}
+                className="flex items-center justify-center gap-2.5 bg-white/8 border border-white/15 text-white px-5 py-3.5 rounded-full text-sm hover:bg-white/12 transition-colors cursor-pointer disabled:opacity-60"
               >
                 <Calendar className="w-4 h-4" />
-                Book a Session
-                <span className="text-black/50 text-xs">· $99.99</span>
+                Book 1:1 Coaching Session · $99.99
               </motion.button>
             </motion.div>
 
@@ -552,17 +549,15 @@ function ReportReady({ analysis, reportData }) {
 // ─── Orchestrator ─────────────────────────────────────────────────────────────
 export default function CompletionPage({ answers }) {
   const [analysis, setAnalysis] = useState(null);
-  const [reportData, setReportData] = useState(null);
   const [phase, setPhase] = useState("generating");
 
   const handleGenerationComplete = useCallback((data) => {
-    setReportData(data ?? null);
     setAnalysis(data?.analysis ?? null);
     setPhase("ready");
   }, []);
 
   if (phase === "ready" && analysis) {
-    return <ReportReady analysis={analysis} reportData={reportData} />;
+    return <ReportReady analysis={analysis} answers={answers} />;
   }
 
   if (phase === "ready" && !analysis) {
