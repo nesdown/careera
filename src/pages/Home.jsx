@@ -20,6 +20,9 @@ import {
 import Navbar from "../components/Navbar";
 import Logo from "../components/Logo";
 import { SpaceBackground, OrbitingElements, ShootingStars, GradientOrbs } from "../components/SpaceBackground";
+import testimonial1 from "../assets/testimonial1.webp";
+import testimonial2 from "../assets/testimonial2.jpeg";
+import testimonial3 from "../assets/testimonial3.jpeg";
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 60 },
@@ -838,7 +841,7 @@ export default function Home() {
       achievement: "Built Leadership Team",
       beforeSalary: "",
       afterSalary: "",
-      image: "/src/assets/testimonial1.webp",
+      image: testimonial1,
       timeAgo: "Recently",
     },
     {
@@ -848,7 +851,7 @@ export default function Home() {
       achievement: "Scaled Team",
       beforeSalary: "",
       afterSalary: "",
-      image: "/src/assets/testimonial2.jpeg",
+      image: testimonial2,
       timeAgo: "Recently",
     },
     {
@@ -858,7 +861,7 @@ export default function Home() {
       achievement: "Leadership Transition",
       beforeSalary: "",
       afterSalary: "",
-      image: "/src/assets/testimonial3.jpeg",
+      image: testimonial3,
       timeAgo: "Recently",
     },
   ];

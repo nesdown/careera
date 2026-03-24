@@ -43,40 +43,13 @@ function CalendlyWidget({ onScheduled }) {
   );
 }
 
-// ─── PDF download helper (mobile-safe) ───────────────────────────────────────
-function triggerDownload(reportData) {
-  if (!reportData?.pdf) return;
-  const src = reportData.pdf;
-  const filename = reportData.filename || "Careera-Leadership-Report.pdf";
-  const isDataUrl = src.startsWith("data:");
-  const isIOS =
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-  let url = src;
-  if (isDataUrl) {
-    const [meta, b64 = ""] = src.split(",", 2);
-    const mime = meta.match(/^data:(.*?);base64$/)?.[1] || "application/pdf";
-    const bytes = new Uint8Array(
-      window.atob(b64).split("").map((c) => c.charCodeAt(0))
-    );
-    url = URL.createObjectURL(new Blob([bytes], { type: mime }));
-  }
-
-  if (isIOS || isSafari) {
-    const w = window.open(url, "_blank", "noopener,noreferrer");
-    if (!w) window.location.href = url;
-  } else {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
-
-  if (url !== src) setTimeout(() => URL.revokeObjectURL(url), 60_000);
+// ─── PDF download — server returns binary with Content-Disposition: attachment
+// This is the only approach that works reliably on iOS Safari and all mobile browsers.
+function triggerDownload(sessionId) {
+  if (!sessionId) return;
+  // Navigate directly to the download endpoint. The server will stream the cached
+  // PDF buffer with proper headers, which forces a download on every device.
+  window.location.href = `/api/download-report?session_id=${encodeURIComponent(sessionId)}`;
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
@@ -157,6 +130,7 @@ export default function Success() {
   }
 
   const isCallPlan = reportData?.plan === "report-call";
+  const downloadSessionId = reportData?.session_id || sessionId;
 
   const loadingSteps = [
     { label: "PAYMENT VERIFIED",          detail: "Stripe confirmation + secure session keys issued." },
@@ -312,7 +286,7 @@ export default function Success() {
               {/* ── REPORT-ONLY: immediate download ── */}
               {!isCallPlan && (
                 <motion.button
-                  onClick={() => triggerDownload(reportData)}
+                  onClick={() => triggerDownload(downloadSessionId)}
                   whileHover={{ scale: 1.015 }}
                   whileTap={{ scale: 0.975 }}
                   className="w-full flex items-center justify-center gap-2.5 bg-white text-black px-6 py-4 rounded-full text-sm font-semibold hover:bg-zinc-100 transition-colors mb-4"
@@ -345,7 +319,7 @@ export default function Success() {
                   {/* Download — locked until Calendly confirms */}
                   <div className="mb-6">
                     <motion.button
-                      onClick={() => calendlyDone && triggerDownload(reportData)}
+                      onClick={() => calendlyDone && triggerDownload(downloadSessionId)}
                       whileHover={calendlyDone ? { scale: 1.015 } : {}}
                       whileTap={calendlyDone ? { scale: 0.975 } : {}}
                       disabled={!calendlyDone}

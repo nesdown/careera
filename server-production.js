@@ -46,6 +46,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_placeholder');
 const pendingSessions = new Map();
 const TEST_EMAILS = new Set(['testemail@email.com']);
 
+// Short-lived PDF cache: session_id → { buffer, filename, expiresAt }
+// Allows clients to download via a dedicated endpoint with proper headers.
+const pdfCache = new Map();
+const PDF_TTL_MS = 30 * 60 * 1000; // 30 minutes
+function cachePdf(sessionId, buffer, filename) {
+  pdfCache.set(sessionId, { buffer, filename, expiresAt: Date.now() + PDF_TTL_MS });
+  // Prune expired entries while we're at it
+  for (const [id, entry] of pdfCache) {
+    if (entry.expiresAt < Date.now()) pdfCache.delete(id);
+  }
+}
+
 
 function parseAiJson(content) {
   if (!content) return null;
@@ -715,14 +727,17 @@ app.post('/api/generate-report-paid', async (req, res) => {
 
     console.log('Generating PDF for paid report...');
     const pdfBuffer = await generatePdfBuffer(analysis);
-    const pdfBase64 = `data:application/pdf;base64,${pdfBuffer.toString('base64')}`;
+    const filename = `Careera-Leadership-Report-${Date.now()}.pdf`;
+
+    // Cache the buffer so the client can download via GET /api/download-report
+    cachePdf(session_id, pdfBuffer, filename);
 
     pendingSessions.delete(session_id);
 
     res.json({
       success: true,
-      pdf: pdfBase64,
-      filename: `Careera-Leadership-Report-${Date.now()}.pdf`,
+      session_id,
+      filename,
       analysis,
       plan: stored.plan,
     });
@@ -730,6 +745,27 @@ app.post('/api/generate-report-paid', async (req, res) => {
     console.error('Error generating paid report:', error);
     res.status(500).json({ success: false, error: 'Failed to generate report', details: error.message });
   }
+});
+
+// Serve a cached PDF as a binary download — this is the reliable cross-device approach.
+// Using Content-Disposition: attachment forces a download on all browsers including iOS Safari.
+app.get('/api/download-report', (req, res) => {
+  const { session_id } = req.query;
+  if (!session_id) return res.status(400).json({ error: 'Missing session_id' });
+
+  const entry = pdfCache.get(session_id);
+  if (!entry) return res.status(404).json({ error: 'Report not found or expired. Please regenerate.' });
+  if (entry.expiresAt < Date.now()) {
+    pdfCache.delete(session_id);
+    return res.status(410).json({ error: 'Download link has expired. Please refresh the page.' });
+  }
+
+  const safeFilename = entry.filename.replace(/[^\w.\-]/g, '_');
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+  res.setHeader('Content-Length', entry.buffer.length);
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(entry.buffer);
 });
 
 // ─── Waitlist ─────────────────────────────────────────────────────────────────
