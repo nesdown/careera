@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, Calendar, CheckCircle } from "lucide-react";
+import { Download, Calendar, CheckCircle, Tag, ArrowRight, Loader2 } from "lucide-react";
 import { getQuestionnaireVariant } from "../data/questions";
 import Navbar from "./Navbar";
 // CalendlyModal is no longer used here — booking happens on /success after payment
@@ -319,6 +319,39 @@ function ReportReady({ analysis, answers }) {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError]     = useState("");
 
+  // Promo code state
+  const [promoOpen,    setPromoOpen]    = useState(false);
+  const [promoCode,    setPromoCode]    = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError,   setPromoError]   = useState("");
+  const [promoSession, setPromoSession] = useState(null); // session_id from server
+
+  const handlePromoRedeem = useCallback(async () => {
+    const trimmed = promoCode.trim();
+    if (!trimmed) { setPromoError("Please enter a promo code."); return; }
+    setPromoLoading(true);
+    setPromoError("");
+    try {
+      const variant = getQuestionnaireVariant();
+      const res  = await fetch("/api/redeem-promo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: trimmed, answers, variant }),
+      });
+      const data = await res.json();
+      if (data.success && data.session_id) {
+        setPromoSession(data.session_id);
+        setPromoError("");
+      } else {
+        setPromoError(data.error || "Could not redeem code. Please try again.");
+      }
+    } catch {
+      setPromoError("Connection error. Please try again.");
+    } finally {
+      setPromoLoading(false);
+    }
+  }, [promoCode, answers]);
+
   const handlePurchase = useCallback(async (plan = "report") => {
     setCheckoutLoading(true);
     setCheckoutError("");
@@ -485,45 +518,154 @@ function ReportReady({ analysis, answers }) {
               <p className="text-red-400 text-xs font-mono mb-3 px-1">⚠ {checkoutError}</p>
             )}
 
-            {/* CTA buttons */}
+            {/* ── Promo code section ── */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.45 }}
-              className="flex flex-col gap-3"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.42 }}
+              className="mb-3"
             >
-              {/* Primary: pay for report */}
-              <motion.button
-                onClick={() => handlePurchase("report")}
-                whileHover={{ scale: 1.015 }}
-                whileTap={{ scale: 0.975 }}
-                disabled={checkoutLoading}
-                animate={{
-                  boxShadow: checkoutLoading ? undefined : [
-                    "0 0 0px rgba(255,255,255,0)",
-                    "0 0 32px rgba(255,255,255,0.12)",
-                    "0 0 0px rgba(255,255,255,0)",
-                  ],
-                }}
-                transition={{ duration: 2.8, repeat: Infinity }}
-                className="flex items-center justify-center gap-2.5 bg-white text-black px-5 py-4 rounded-full font-semibold text-sm hover:bg-zinc-100 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <Download className="w-4 h-4" />
-                {checkoutLoading ? "Redirecting to checkout…" : "Download Full Report · $29.99"}
-              </motion.button>
+              {!promoOpen && !promoSession && (
+                <button
+                  onClick={() => setPromoOpen(true)}
+                  className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-400 transition-colors font-mono tracking-wider"
+                >
+                  <Tag className="w-3 h-3" />
+                  Have a promo code?
+                </button>
+              )}
 
-              {/* Secondary: book session — goes through Stripe then Calendly */}
-              <motion.button
-                onClick={() => handlePurchase("report-call")}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-                disabled={checkoutLoading}
-                className="flex items-center justify-center gap-2.5 bg-white/8 border border-white/15 text-white px-5 py-3.5 rounded-full text-sm hover:bg-white/12 transition-colors cursor-pointer disabled:opacity-60"
-              >
-                <Calendar className="w-4 h-4" />
-                {checkoutLoading ? "Redirecting…" : "Book Session + Get Report · $99.99"}
-              </motion.button>
+              <AnimatePresence>
+                {promoOpen && !promoSession && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.28 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex gap-2 mt-2">
+                      <input
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoError(""); }}
+                        onKeyDown={(e) => e.key === "Enter" && handlePromoRedeem()}
+                        placeholder="ENTER CODE"
+                        spellCheck={false}
+                        className="flex-1 bg-zinc-900/60 border border-zinc-700/60 rounded-xl px-4 py-2.5
+                                   text-white text-sm font-mono tracking-widest uppercase
+                                   placeholder-zinc-700 outline-none focus:border-zinc-500 transition-all"
+                      />
+                      <button
+                        onClick={handlePromoRedeem}
+                        disabled={promoLoading || !promoCode.trim()}
+                        className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/8 border border-white/15
+                                   text-white text-sm font-semibold hover:bg-white/15 transition-colors
+                                   disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                      >
+                        {promoLoading
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <><ArrowRight className="w-4 h-4" /> Apply</>}
+                      </button>
+                    </div>
+                    {promoError && (
+                      <p className="text-red-400 text-xs font-mono mt-2 px-1">⚠ {promoError}</p>
+                    )}
+                    {promoLoading && (
+                      <p className="text-zinc-600 text-[10px] font-mono mt-2 px-1 tracking-wider">
+                        Validating code and generating your report…
+                      </p>
+                    )}
+                  </motion.div>
+                )}
+
+                {/* Promo successfully redeemed */}
+                {promoSession && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.97 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                    className="mt-2 p-4 rounded-xl border border-white/15 bg-white/[0.04] flex items-start gap-3"
+                  >
+                    <CheckCircle className="w-5 h-5 text-white shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-white text-sm font-semibold mb-0.5">Promo code applied!</p>
+                      <p className="text-zinc-500 text-xs">Your report is ready. Download below — for free.</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
+
+            {/* CTA buttons — replaced by free download when promo is redeemed */}
+            <AnimatePresence mode="wait">
+              {promoSession ? (
+                <motion.div
+                  key="promo-download"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <motion.button
+                    onClick={() => { window.location.href = `/api/download-report?session_id=${encodeURIComponent(promoSession)}`; }}
+                    whileHover={{ scale: 1.015 }}
+                    whileTap={{ scale: 0.975 }}
+                    animate={{
+                      boxShadow: [
+                        "0 0 0px rgba(255,255,255,0)",
+                        "0 0 32px rgba(255,255,255,0.14)",
+                        "0 0 0px rgba(255,255,255,0)",
+                      ],
+                    }}
+                    transition={{ duration: 2.4, repeat: Infinity }}
+                    className="w-full flex items-center justify-center gap-2.5 bg-white text-black px-5 py-4 rounded-full font-semibold text-sm hover:bg-zinc-100 transition-colors cursor-pointer"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Your Free Report
+                  </motion.button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="paid-buttons"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.45 }}
+                  className="flex flex-col gap-3"
+                >
+                  {/* Primary: pay for report */}
+                  <motion.button
+                    onClick={() => handlePurchase("report")}
+                    whileHover={{ scale: 1.015 }}
+                    whileTap={{ scale: 0.975 }}
+                    disabled={checkoutLoading}
+                    animate={{
+                      boxShadow: checkoutLoading ? undefined : [
+                        "0 0 0px rgba(255,255,255,0)",
+                        "0 0 32px rgba(255,255,255,0.12)",
+                        "0 0 0px rgba(255,255,255,0)",
+                      ],
+                    }}
+                    transition={{ duration: 2.8, repeat: Infinity }}
+                    className="flex items-center justify-center gap-2.5 bg-white text-black px-5 py-4 rounded-full font-semibold text-sm hover:bg-zinc-100 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <Download className="w-4 h-4" />
+                    {checkoutLoading ? "Redirecting to checkout…" : "Download Full Report · $29.99"}
+                  </motion.button>
+
+                  {/* Secondary: book session — goes through Stripe then Calendly */}
+                  <motion.button
+                    onClick={() => handlePurchase("report-call")}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    disabled={checkoutLoading}
+                    className="flex items-center justify-center gap-2.5 bg-white/8 border border-white/15 text-white px-5 py-3.5 rounded-full text-sm hover:bg-white/12 transition-colors cursor-pointer disabled:opacity-60"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    {checkoutLoading ? "Redirecting…" : "Book Session + Get Report · $99.99"}
+                  </motion.button>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <motion.div
               initial={{ opacity: 0 }}

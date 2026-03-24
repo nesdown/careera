@@ -58,6 +58,28 @@ function cachePdf(sessionId, buffer, filename) {
   }
 }
 
+// ─── One-time promo codes ──────────────────────────────────────────────────────
+// Each code can be redeemed once for a free full report download.
+// To add/change codes, edit this object. Keys are the codes (always uppercased
+// when comparing), values are { used: boolean }.
+// You can also set PROMO_CODES env var as a comma-separated list to override:
+//   PROMO_CODES=LAUNCH01,LAUNCH02,EARLYBIRD
+const PROMO_CODE_MAP = (() => {
+  const defaults = [
+    'CAREERA01','CAREERA02','CAREERA03','CAREERA04','CAREERA05',
+    'CAREERA06','CAREERA07','CAREERA08','CAREERA09','CAREERA10',
+    'LAUNCH2026','EARLYBIRD','PIONEER01','PIONEER02','PIONEER03',
+  ];
+  const envCodes = process.env.PROMO_CODES
+    ? process.env.PROMO_CODES.split(',').map(c => c.trim().toUpperCase()).filter(Boolean)
+    : [];
+  const codes = envCodes.length ? envCodes : defaults;
+  const map = new Map();
+  for (const code of codes) map.set(code, { used: false, usedAt: null });
+  console.log(`[promo] ${map.size} promo codes loaded:`, [...map.keys()].join(', '));
+  return map;
+})();
+
 
 function parseAiJson(content) {
   if (!content) return null;
@@ -766,6 +788,54 @@ app.get('/api/download-report', (req, res) => {
   res.setHeader('Content-Length', entry.buffer.length);
   res.setHeader('Cache-Control', 'no-store');
   res.send(entry.buffer);
+});
+
+// Validate and redeem a one-time promo code — generates the full report for free.
+app.post('/api/redeem-promo', async (req, res) => {
+  req.setTimeout(120000);
+  res.setTimeout(120000);
+
+  const { code, answers, variant } = req.body || {};
+  const normalized = (typeof code === 'string' ? code.trim().toUpperCase() : '');
+
+  if (!normalized) return res.status(400).json({ success: false, error: 'Please enter a promo code.' });
+
+  const entry = PROMO_CODE_MAP.get(normalized);
+  if (!entry) return res.status(400).json({ success: false, error: 'Invalid promo code. Double-check and try again.' });
+  if (entry.used) return res.status(400).json({ success: false, error: 'This code has already been used.' });
+
+  // Mark used immediately to prevent concurrent redemption race condition
+  entry.used = true;
+  entry.usedAt = new Date().toISOString();
+
+  try {
+    const questionAnswers = Object.entries(answers || {}).map(([questionId, answer]) => ({
+      questionId, answer: String(answer || ''),
+    }));
+    const seed = hashString(JSON.stringify(questionAnswers));
+
+    let aiRaw = null;
+    try { aiRaw = await generateAnalysis(questionAnswers); } catch (e) {
+      console.warn('[promo] AI analysis fallback for', normalized, e.message);
+    }
+    const analysis = normalizeAnalysis(aiRaw, seed);
+
+    console.log(`[promo] Generating PDF for code ${normalized}...`);
+    const pdfBuffer = await generatePdfBuffer(analysis);
+    const filename = `Careera-Leadership-Report-${Date.now()}.pdf`;
+    const sessionId = `promo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+    cachePdf(sessionId, pdfBuffer, filename);
+    console.log(`[promo] Code ${normalized} redeemed. session=${sessionId}`);
+
+    res.json({ success: true, session_id: sessionId, filename, analysis });
+  } catch (err) {
+    // Restore code so the user can retry if generation failed
+    entry.used = false;
+    entry.usedAt = null;
+    console.error('[promo] Report generation failed:', err.message);
+    res.status(500).json({ success: false, error: 'Report generation failed. Please try again.' });
+  }
 });
 
 // ─── Waitlist ─────────────────────────────────────────────────────────────────

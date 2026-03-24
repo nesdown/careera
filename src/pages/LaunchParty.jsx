@@ -1,7 +1,105 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Rocket, Check, ArrowRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Rocket, Check, ArrowRight, Copy, CheckCheck } from "lucide-react";
 import { Link } from "react-router-dom";
+
+// ── Promo codes shown floating — must match server-side PROMO_CODE_MAP ────────
+const FLOATING_CODES = [
+  'CAREERA01','CAREERA02','CAREERA03','CAREERA04','CAREERA05',
+  'CAREERA06','CAREERA07','CAREERA08','CAREERA09','CAREERA10',
+  'LAUNCH2026','EARLYBIRD','PIONEER01','PIONEER02','PIONEER03',
+];
+
+// ── Floating promo interceptor — appears every 5-7 minutes, flows across ──────
+function FloatingPromo() {
+  const [active, setActive] = useState(null); // { code, y, key }
+  const [copied, setCopied] = useState(false);
+  const timerRef = useRef(null);
+  const hideRef  = useRef(null);
+  const codeIdxRef = useRef(0);
+
+  const show = useCallback(() => {
+    const code = FLOATING_CODES[codeIdxRef.current % FLOATING_CODES.length];
+    codeIdxRef.current++;
+    // Random vertical position — keep away from top/bottom bars
+    const y = 18 + Math.random() * 58; // 18%–76% of viewport height
+    setActive({ code, y, key: Date.now() });
+    setCopied(false);
+
+    // Auto-hide after 9 seconds
+    hideRef.current = setTimeout(() => {
+      setActive(null);
+      scheduleNext();
+    }, 9000);
+  }, []);
+
+  const scheduleNext = useCallback(() => {
+    const delay = (5 + Math.random() * 2) * 60 * 1000; // 5–7 min
+    timerRef.current = setTimeout(show, delay);
+  }, [show]);
+
+  useEffect(() => {
+    scheduleNext();
+    return () => { clearTimeout(timerRef.current); clearTimeout(hideRef.current); };
+  }, [scheduleNext]);
+
+  const handleCopy = useCallback(() => {
+    if (!active?.code) return;
+    navigator.clipboard.writeText(active.code).catch(() => {});
+    setCopied(true);
+    // Keep it visible a bit longer after copy so they can see confirmation
+    clearTimeout(hideRef.current);
+    hideRef.current = setTimeout(() => { setActive(null); scheduleNext(); }, 4000);
+  }, [active, scheduleNext]);
+
+  return (
+    <AnimatePresence>
+      {active && (
+        <motion.div
+          key={active.key}
+          initial={{ x: "-18%", opacity: 0 }}
+          animate={{ x: ["−18%", "110%"], opacity: [0, 1, 1, 1, 0] }}
+          transition={{ duration: 11, ease: "linear", times: [0, 0.06, 0.6, 0.88, 1] }}
+          style={{ top: `${active.y}%` }}
+          className="fixed left-0 z-50 pointer-events-none"
+          aria-hidden
+        >
+          {/* The card itself is clickable */}
+          <motion.button
+            onClick={handleCopy}
+            className="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl
+                       bg-black/90 border border-white/20 backdrop-blur-md shadow-2xl
+                       text-left cursor-pointer group hover:border-white/40 transition-colors"
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.97 }}
+          >
+            {/* Left accent */}
+            <div className="w-0.5 h-8 bg-white/60 rounded-full shrink-0" />
+
+            <div className="min-w-0">
+              <div className="text-[9px] font-mono text-white/40 tracking-[0.3em] uppercase mb-0.5">
+                Promo Code · Limited Use
+              </div>
+              <div className="text-base sm:text-lg font-mono font-bold text-white tracking-widest">
+                {active.code}
+              </div>
+              <div className="text-[9px] font-mono text-white/30 mt-0.5">
+                {copied ? "Copied to clipboard ✓" : "Click to copy · Use at checkout"}
+              </div>
+            </div>
+
+            <div className="shrink-0 w-7 h-7 rounded-full border border-white/20 flex items-center justify-center
+                            group-hover:border-white/40 transition-colors">
+              {copied
+                ? <CheckCheck className="w-3.5 h-3.5 text-white" />
+                : <Copy className="w-3.5 h-3.5 text-white/50 group-hover:text-white transition-colors" />}
+            </div>
+          </motion.button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 // ── Static star field (deterministic, no Math.random to avoid re-renders) ───
 const STARS = Array.from({ length: 110 }, (_, i) => ({
@@ -629,6 +727,9 @@ export default function LaunchParty() {
 
   return (
     <div className="fixed inset-0 bg-[#050507] overflow-hidden" style={{ userSelect: "none" }}>
+
+      {/* Floating promo codes — appear every 5-7 minutes */}
+      <FloatingPromo />
 
       {/* Star field */}
       <div className="absolute inset-0 pointer-events-none">
