@@ -2,13 +2,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Rocket, Check, ArrowRight, Copy, CheckCheck } from "lucide-react";
 import { Link } from "react-router-dom";
+import { PROMO_CODE_STRINGS, PROMO_TIERS } from "../../promoCodes.js";
 
-// ── Promo codes shown floating — must match server-side PROMO_CODE_MAP ────────
-const FLOATING_CODES = [
-  'CAREERA01','CAREERA02','CAREERA03','CAREERA04','CAREERA05',
-  'CAREERA06','CAREERA07','CAREERA08','CAREERA09','CAREERA10',
-  'LAUNCH2026','EARLYBIRD','PIONEER01','PIONEER02','PIONEER03',
-];
+// ── Floating strip rotates through keys — must match server promoCodes.js ────
+const FLOATING_CODES = PROMO_CODE_STRINGS;
 
 // ── Floating promo interceptor — appears every 5-7 minutes, flows across ──────
 function FloatingPromo() {
@@ -83,8 +80,8 @@ function FloatingPromo() {
               <div className="text-base sm:text-lg font-mono font-bold text-white tracking-widest">
                 {active.code}
               </div>
-              <div className="text-[9px] font-mono text-white/30 mt-0.5">
-                {copied ? "Copied to clipboard ✓" : "Click to copy · Use at checkout"}
+              <div className="text-[9px] font-mono text-white/30 mt-0.5 max-w-[min(90vw,420px)]">
+                {copied ? "Copied to clipboard ✓" : "Click to copy · Enter on the report page (checkout or free unlock)"}
               </div>
             </div>
 
@@ -249,7 +246,7 @@ const SLIDES = [
     num: 18, type: "cta",
     eyebrow: "EARLY ACCESS · 18",
     title: "You're early",
-    code: "[YOUR CODE]",
+    code: null, // CTASlide uses shared PROMO_TIERS from promoCodes.js
     perks: ["Early access", "Better pricing", "Direct connection with us"],
   },
   {
@@ -572,12 +569,12 @@ function ProductSlide({ s }) {
 }
 
 function CTASlide({ s }) {
-  const [copied, setCopied] = useState(false);
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(s.code).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2200);
-  }, [s.code]);
+  const [copiedIdx, setCopiedIdx] = useState(null);
+  const handleCopy = useCallback((code, idx) => {
+    navigator.clipboard.writeText(code).catch(() => {});
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 2200);
+  }, []);
 
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-6 sm:space-y-10 max-w-2xl mx-auto text-center">
@@ -588,18 +585,34 @@ function CTASlide({ s }) {
 
       <motion.div
         variants={item}
-        className="relative p-6 sm:p-8 rounded-2xl border-2 border-dashed border-zinc-700 bg-zinc-950/80"
+        className="relative p-6 sm:p-8 rounded-2xl border-2 border-dashed border-zinc-700 bg-zinc-950/80 text-left"
       >
-        <div className="text-[10px] font-mono text-zinc-600 tracking-widest uppercase mb-3">Promo Code</div>
-        <div className="text-2xl sm:text-4xl font-mono font-bold text-white tracking-widest mb-4">{s.code}</div>
-        <motion.button
-          onClick={handleCopy}
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.97 }}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-zinc-700 text-xs font-mono text-zinc-400 hover:text-white hover:border-zinc-400 transition-all"
-        >
-          {copied ? <><Check className="w-3 h-3 text-green-400" /> Copied!</> : "Copy code"}
-        </motion.button>
+        <div className="text-[10px] font-mono text-zinc-600 tracking-widest uppercase mb-4 text-center">Promo keys · one use each</div>
+        <div className="space-y-4 mb-4">
+          {PROMO_TIERS.map(({ code, discountPercent }, idx) => (
+            <div
+              key={code}
+              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-xl border border-zinc-800 bg-black/40 px-4 py-3"
+            >
+              <div className="min-w-0">
+                <div className="text-[10px] font-mono text-zinc-500 mb-1">
+                  {discountPercent === 100 ? "100% — full report" : `${discountPercent}% off at checkout`}
+                </div>
+                <div className="text-sm sm:text-base font-mono font-bold text-white tracking-wide break-all">{code}</div>
+              </div>
+              <motion.button
+                type="button"
+                onClick={() => handleCopy(code, idx)}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-zinc-700 text-xs font-mono text-zinc-400 hover:text-white hover:border-zinc-400 transition-all"
+              >
+                {copiedIdx === idx ? <><Check className="w-3 h-3 text-green-400" /> Copied</> : "Copy"}
+              </motion.button>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] font-mono text-zinc-600 text-center">Enter on the assessment completion screen — 100% keys unlock immediately; others discount Stripe.</p>
         {/* Corner ticks decoration */}
         {[["top-2 left-2", "border-t border-l"], ["top-2 right-2", "border-t border-r"], ["bottom-2 left-2", "border-b border-l"], ["bottom-2 right-2", "border-b border-r"]].map(([pos, border], i) => (
           <div key={i} className={`absolute ${pos} w-3 h-3 ${border} border-white/20`} />

@@ -6,6 +6,14 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { generatePdfBuffer } from './reportPdf.js';
+import {
+  normalizePromoCode,
+  createPromoMap,
+  discountedCents,
+  PRICE_REPORT_CENTS,
+  PRICE_REPORT_CALL_CENTS,
+} from './promoCodes.js';
 
 dotenv.config();
 
@@ -41,6 +49,16 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 // Temporary in-memory store: stripeSessionId → { answers, variant, email }
 // Fine for now; replace with Redis/DB when scaling
 const pendingSessions = new Map();
+
+const PROMO_CODE_MAP = createPromoMap();
+const pdfCache = new Map();
+const PDF_TTL_MS = 30 * 60 * 1000;
+function cachePdf(sessionId, buffer, filename) {
+  pdfCache.set(sessionId, { buffer, filename, expiresAt: Date.now() + PDF_TTL_MS });
+  for (const [id, entry] of pdfCache) {
+    if (entry.expiresAt < Date.now()) pdfCache.delete(id);
+  }
+}
 
 const GAMMA_API_KEY = process.env.GAMMA_API_KEY;
 const GAMMA_API_BASE = 'https://public-api.gamma.app/v1.0';
@@ -539,9 +557,35 @@ async function pollGammaGeneration(generationId, maxWaitMs = 300000) {
 // Create a Stripe Checkout session and store answers for post-payment report generation
 app.post('/api/create-checkout-session', async (req, res) => {
   try {
-    const { answers, variant, email, plan } = req.body || {};
+    const { answers, variant, email, plan, promoCode: rawPromo } = req.body || {};
 
     const SITE_URL = process.env.SITE_URL || 'https://careera.cc';
+
+    const base = plan === 'report-call' ? PRICE_REPORT_CALL_CENTS : PRICE_REPORT_CENTS;
+    const normalizedPromo = normalizePromoCode(typeof rawPromo === 'string' ? rawPromo : '');
+    let promoMeta = null;
+    let unitAmount = base;
+
+    if (normalizedPromo) {
+      const pEntry = PROMO_CODE_MAP.get(normalizedPromo);
+      if (!pEntry) return res.status(400).json({ success: false, error: 'Invalid promo code.' });
+      if (pEntry.used) return res.status(400).json({ success: false, error: 'This promo code has already been used.' });
+      const d = pEntry.discountPercent;
+      if (d === 100) {
+        return res.status(400).json({
+          success: false,
+          error: 'This code unlocks the report at no charge. Use “Apply” on the promo field — it does not use checkout.',
+        });
+      }
+      if (d !== 15 && d !== 25) {
+        return res.status(400).json({ success: false, error: 'This promo code cannot be used at checkout.' });
+      }
+      unitAmount = discountedCents(base, d);
+      if (unitAmount < 50) {
+        return res.status(400).json({ success: false, error: 'Discounted amount is below the minimum charge. Contact support.' });
+      }
+      promoMeta = { code: normalizedPromo, discountPercent: d };
+    }
 
     const lineItems = plan === 'report-call'
       ? [{
@@ -549,9 +593,11 @@ app.post('/api/create-checkout-session', async (req, res) => {
             currency: 'usd',
             product_data: {
               name: 'Leadership Report + Career Boost Call',
-              description: 'Personalized 10-page PDF leadership report + 30-min 1-on-1 strategy call with a leadership coach',
+              description: promoMeta
+                ? `Personalized 10-page PDF leadership report + 30-min call (${promoMeta.discountPercent}% promo)`
+                : 'Personalized 10-page PDF leadership report + 30-min 1-on-1 strategy call with a leadership coach',
             },
-            unit_amount: 9700,
+            unit_amount: unitAmount,
           },
           quantity: 1,
         }]
@@ -560,9 +606,11 @@ app.post('/api/create-checkout-session', async (req, res) => {
             currency: 'usd',
             product_data: {
               name: 'Leadership Report',
-              description: 'Personalized 10-page PDF leadership report with AI analysis, competency scores, and 90-day roadmap',
+              description: promoMeta
+                ? `Personalized 10-page PDF leadership report (${promoMeta.discountPercent}% promo)`
+                : 'Personalized 10-page PDF leadership report with AI analysis, competency scores, and 90-day roadmap',
             },
-            unit_amount: 2900,
+            unit_amount: unitAmount,
           },
           quantity: 1,
         }];
@@ -574,11 +622,16 @@ app.post('/api/create-checkout-session', async (req, res) => {
       line_items: lineItems,
       success_url: `${SITE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${SITE_URL}/?cancelled=1`,
-      metadata: { plan: plan || 'report' },
+      metadata: {
+        plan: plan || 'report',
+        ...(promoMeta ? { promo_code: promoMeta.code, promo_discount: String(promoMeta.discountPercent) } : {}),
+      },
     });
 
-    // Store answers keyed by Stripe session ID
-    pendingSessions.set(session.id, { answers, variant, email, plan });
+    pendingSessions.set(session.id, {
+      answers, variant, email, plan,
+      promoCode: promoMeta?.code,
+    });
 
     res.json({ url: session.url });
   } catch (error) {
@@ -606,7 +659,7 @@ app.post('/api/generate-report-paid', async (req, res) => {
     const stored = pendingSessions.get(session_id);
     if (!stored) return res.status(404).json({ success: false, error: 'Session data not found. Please contact support.' });
 
-    const { answers = {}, variant } = stored;
+    const { answers = {}, variant, promoCode: paidPromoCode } = stored;
 
     // Generate the report (same logic as /api/generate-report)
     const questionAnswers = Object.entries(answers).map(([questionId, answer]) => ({
@@ -632,6 +685,7 @@ app.post('/api/generate-report-paid', async (req, res) => {
     const gammaUrl = result.gammaUrl || result.gamma_url || result.url || null;
 
     let pdfBase64 = null;
+    const filename = `Careera-Leadership-Report-${Date.now()}.pdf`;
     if (exportUrl) {
       try {
         const pdfResponse = await axios.get(exportUrl, {
@@ -639,26 +693,131 @@ app.post('/api/generate-report-paid', async (req, res) => {
           headers: { 'X-API-KEY': GAMMA_API_KEY },
           timeout: 60000,
         });
-        pdfBase64 = `data:application/pdf;base64,${Buffer.from(pdfResponse.data).toString('base64')}`;
+        const buf = Buffer.from(pdfResponse.data);
+        pdfBase64 = `data:application/pdf;base64,${buf.toString('base64')}`;
+        cachePdf(session_id, buf, filename);
       } catch (e) {
         console.error('PDF download failed:', e.message);
       }
     }
 
-    // Clean up session store
+    if (paidPromoCode) {
+      const pe = PROMO_CODE_MAP.get(paidPromoCode);
+      if (pe && !pe.used) {
+        pe.used = true;
+        pe.usedAt = new Date().toISOString();
+        console.log(`[promo] Checkout code marked used: ${paidPromoCode}`);
+      }
+    }
+
     pendingSessions.delete(session_id);
 
     res.json({
       success: true,
+      session_id,
       pdf: pdfBase64,
       gammaUrl,
-      filename: `Careera-Leadership-Report-${Date.now()}.pdf`,
+      filename,
       analysis,
       plan: stored.plan,
     });
   } catch (error) {
     console.error('Error generating paid report:', error);
     res.status(500).json({ success: false, error: 'Failed to generate report', details: error.message });
+  }
+});
+
+app.get('/api/download-report', (req, res) => {
+  const { session_id } = req.query;
+  if (!session_id) return res.status(400).json({ error: 'Missing session_id' });
+  const entry = pdfCache.get(session_id);
+  if (!entry) return res.status(404).json({ error: 'Report not found or expired. Please regenerate.' });
+  if (entry.expiresAt < Date.now()) {
+    pdfCache.delete(session_id);
+    return res.status(410).json({ error: 'Download link has expired. Please refresh the page.' });
+  }
+  const safeFilename = entry.filename.replace(/[^\w.-]/g, '_');
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+  res.setHeader('Content-Length', entry.buffer.length);
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(entry.buffer);
+});
+
+app.post('/api/validate-promo', (req, res) => {
+  const raw = req.body?.code;
+  const normalized = normalizePromoCode(typeof raw === 'string' ? raw : '');
+  if (!normalized) {
+    return res.status(400).json({ valid: false, error: 'Please enter a promo code.' });
+  }
+  const entry = PROMO_CODE_MAP.get(normalized);
+  if (!entry) {
+    return res.json({ valid: false, error: 'Invalid promo code. Double-check and try again.' });
+  }
+  if (entry.used) {
+    return res.json({ valid: false, error: 'This code has already been used.' });
+  }
+  const discountPercent = entry.discountPercent;
+  const report = { original: PRICE_REPORT_CENTS, discounted: discountedCents(PRICE_REPORT_CENTS, discountPercent) };
+  const reportCall = {
+    original: PRICE_REPORT_CALL_CENTS,
+    discounted: discountedCents(PRICE_REPORT_CALL_CENTS, discountPercent),
+  };
+  return res.json({
+    valid: true,
+    discountPercent,
+    prices: { report, reportCall },
+  });
+});
+
+app.post('/api/redeem-promo', async (req, res) => {
+  req.setTimeout(120000);
+  res.setTimeout(120000);
+
+  const { code, answers } = req.body || {};
+  const normalized = normalizePromoCode(typeof code === 'string' ? code : '');
+
+  if (!normalized) return res.status(400).json({ success: false, error: 'Please enter a promo code.' });
+
+  const entry = PROMO_CODE_MAP.get(normalized);
+  if (!entry) return res.status(400).json({ success: false, error: 'Invalid promo code. Double-check and try again.' });
+  if (entry.used) return res.status(400).json({ success: false, error: 'This code has already been used.' });
+  if (entry.discountPercent !== 100) {
+    return res.status(400).json({
+      success: false,
+      error: `This code gives ${entry.discountPercent}% off. Complete checkout with the discounted price instead.`,
+    });
+  }
+
+  entry.used = true;
+  entry.usedAt = new Date().toISOString();
+
+  try {
+    const questionAnswers = Object.entries(answers || {}).map(([questionId, answer]) => ({
+      questionId,
+      answer: String(answer || ''),
+    }));
+    const seed = hashString(JSON.stringify(questionAnswers));
+
+    let aiRaw = null;
+    try {
+      aiRaw = await generateAnalysis(questionAnswers);
+    } catch (e) {
+      console.warn('[promo] AI analysis fallback for', normalized, e.message);
+    }
+    const analysis = normalizeAnalysis(aiRaw, seed);
+
+    const pdfBuffer = await generatePdfBuffer(analysis);
+    const filename = `Careera-Leadership-Report-${Date.now()}.pdf`;
+    const promoSessionId = `promo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    cachePdf(promoSessionId, pdfBuffer, filename);
+
+    res.json({ success: true, session_id: promoSessionId, filename, analysis });
+  } catch (err) {
+    entry.used = false;
+    entry.usedAt = null;
+    console.error('[promo] Report generation failed:', err.message);
+    res.status(500).json({ success: false, error: 'Report generation failed. Please try again.' });
   }
 });
 

@@ -4,6 +4,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Download, Calendar, CheckCircle, Tag, ArrowRight, Loader2 } from "lucide-react";
 import { getQuestionnaireVariant } from "../data/questions";
 import Navbar from "./Navbar";
+import {
+  PRICE_REPORT_CENTS,
+  PRICE_REPORT_CALL_CENTS,
+} from "../../promoCodes.js";
+
+function formatUsd(cents) {
+  return `$${(Number(cents) / 100).toFixed(2)}`;
+}
 // CalendlyModal is no longer used here — booking happens on /success after payment
 
 // ─── Console log steps ────────────────────────────────────────────────────────
@@ -324,29 +332,53 @@ function ReportReady({ analysis, answers }) {
   const [promoCode,    setPromoCode]    = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError,   setPromoError]   = useState("");
-  const [promoSession, setPromoSession] = useState(null); // session_id from server
+  const [promoSession, setPromoSession] = useState(null); // free (100%) — session_id from server
+  /** Validated 15% / 25% code — passed to Stripe checkout */
+  const [checkoutPromo, setCheckoutPromo] = useState(null);
 
-  const handlePromoRedeem = useCallback(async () => {
+  const handleApplyPromo = useCallback(async () => {
     const trimmed = promoCode.trim();
     if (!trimmed) { setPromoError("Please enter a promo code."); return; }
     setPromoLoading(true);
     setPromoError("");
     try {
       const variant = getQuestionnaireVariant();
-      const res  = await fetch("/api/redeem-promo", {
+      const res = await fetch("/api/validate-promo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: trimmed, answers, variant }),
+        body: JSON.stringify({ code: trimmed }),
       });
       const data = await res.json();
-      if (data.success && data.session_id) {
-        setPromoSession(data.session_id);
-        setPromoError("");
-      } else {
-        setPromoError(data.error || "Could not redeem code. Please try again.");
+      if (!data.valid) {
+        setPromoError(data.error || "Invalid or used promo code.");
+        setCheckoutPromo(null);
+        return;
       }
+      if (data.discountPercent === 100) {
+        const r = await fetch("/api/redeem-promo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code: trimmed, answers, variant }),
+        });
+        const redeem = await r.json();
+        if (redeem.success && redeem.session_id) {
+          setPromoSession(redeem.session_id);
+          setCheckoutPromo(null);
+          setPromoError("");
+        } else {
+          setPromoError(redeem.error || "Could not redeem code. Please try again.");
+        }
+        return;
+      }
+      setCheckoutPromo({
+        code: trimmed,
+        discountPercent: data.discountPercent,
+        prices: data.prices,
+      });
+      setPromoError("");
     } catch {
       setPromoError("Connection error. Please try again.");
+      setCheckoutPromo(null);
     } finally {
       setPromoLoading(false);
     }
@@ -360,20 +392,29 @@ function ReportReady({ analysis, answers }) {
       const res = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers, variant, email: email.trim(), plan }),
+        body: JSON.stringify({
+          answers,
+          variant,
+          email: email.trim(),
+          plan,
+          ...(checkoutPromo ? { promoCode: checkoutPromo.code } : {}),
+        }),
       });
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
       } else {
-        setCheckoutError("Could not start checkout. Please try again.");
+        setCheckoutError(data.error || "Could not start checkout. Please try again.");
       }
     } catch {
       setCheckoutError("Connection error. Please try again.");
     } finally {
       setCheckoutLoading(false);
     }
-  }, [answers, email]);
+  }, [answers, email, checkoutPromo]);
+
+  const reportCents = checkoutPromo?.prices?.report?.discounted ?? PRICE_REPORT_CENTS;
+  const callCents = checkoutPromo?.prices?.reportCall?.discounted ?? PRICE_REPORT_CALL_CENTS;
 
   return (
     <>
@@ -548,16 +589,21 @@ function ReportReady({ analysis, answers }) {
                       <input
                         type="text"
                         value={promoCode}
-                        onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoError(""); }}
-                        onKeyDown={(e) => e.key === "Enter" && handlePromoRedeem()}
-                        placeholder="ENTER CODE"
+                        onChange={(e) => {
+                          setPromoCode(e.target.value);
+                          setPromoError("");
+                          setCheckoutPromo(null);
+                        }}
+                        onKeyDown={(e) => e.key === "Enter" && handleApplyPromo()}
+                        placeholder="e.g. CR-LQX8-M7KP-9W3N-P15-…"
                         spellCheck={false}
+                        autoCapitalize="characters"
                         className="flex-1 bg-zinc-900/60 border border-zinc-700/60 rounded-xl px-4 py-2.5
-                                   text-white text-sm font-mono tracking-widest uppercase
+                                   text-white text-sm font-mono tracking-wide
                                    placeholder-zinc-700 outline-none focus:border-zinc-500 transition-all"
                       />
                       <button
-                        onClick={handlePromoRedeem}
+                        onClick={handleApplyPromo}
                         disabled={promoLoading || !promoCode.trim()}
                         className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white/8 border border-white/15
                                    text-white text-sm font-semibold hover:bg-white/15 transition-colors
@@ -568,12 +614,19 @@ function ReportReady({ analysis, answers }) {
                           : <><ArrowRight className="w-4 h-4" /> Apply</>}
                       </button>
                     </div>
+                    {checkoutPromo && (
+                      <p className="text-emerald-400/90 text-xs font-mono mt-2 px-1">
+                        {checkoutPromo.discountPercent}% off — checkout uses{" "}
+                        {formatUsd(checkoutPromo.prices.report.discounted)} (report) or{" "}
+                        {formatUsd(checkoutPromo.prices.reportCall.discounted)} (report + session).
+                      </p>
+                    )}
                     {promoError && (
                       <p className="text-red-400 text-xs font-mono mt-2 px-1">⚠ {promoError}</p>
                     )}
                     {promoLoading && (
                       <p className="text-zinc-600 text-[10px] font-mono mt-2 px-1 tracking-wider">
-                        Validating code and generating your report…
+                        Checking your code…
                       </p>
                     )}
                   </motion.div>
@@ -649,7 +702,9 @@ function ReportReady({ analysis, answers }) {
                     className="flex items-center justify-center gap-2.5 bg-white text-black px-5 py-4 rounded-full font-semibold text-sm hover:bg-zinc-100 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <Download className="w-4 h-4" />
-                    {checkoutLoading ? "Redirecting to checkout…" : "Download Full Report · $29.99"}
+                    {checkoutLoading
+                      ? "Redirecting to checkout…"
+                      : `Download Full Report · ${formatUsd(reportCents)}`}
                   </motion.button>
 
                   {/* Secondary: book session — goes through Stripe then Calendly */}
@@ -661,7 +716,9 @@ function ReportReady({ analysis, answers }) {
                     className="flex items-center justify-center gap-2.5 bg-white/8 border border-white/15 text-white px-5 py-3.5 rounded-full text-sm hover:bg-white/12 transition-colors cursor-pointer disabled:opacity-60"
                   >
                     <Calendar className="w-4 h-4" />
-                    {checkoutLoading ? "Redirecting…" : "Book Session + Get Report · $99.99"}
+                    {checkoutLoading
+                      ? "Redirecting…"
+                      : `Book Session + Get Report · ${formatUsd(callCents)}`}
                   </motion.button>
                 </motion.div>
               )}

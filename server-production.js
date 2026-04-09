@@ -9,6 +9,13 @@ import { generatePdfBuffer } from './reportPdf.js';
 import { dirname, join } from 'path';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import nodemailer from 'nodemailer';
+import {
+  normalizePromoCode,
+  createPromoMap,
+  discountedCents,
+  PRICE_REPORT_CENTS,
+  PRICE_REPORT_CALL_CENTS,
+} from './promoCodes.js';
 
 dotenv.config();
 
@@ -58,27 +65,14 @@ function cachePdf(sessionId, buffer, filename) {
   }
 }
 
-// ─── One-time promo codes ──────────────────────────────────────────────────────
-// Each code can be redeemed once for a free full report download.
-// To add/change codes, edit this object. Keys are the codes (always uppercased
-// when comparing), values are { used: boolean }.
-// You can also set PROMO_CODES env var as a comma-separated list to override:
-//   PROMO_CODES=LAUNCH01,LAUNCH02,EARLYBIRD
-const PROMO_CODE_MAP = (() => {
-  const defaults = [
-    'CAREERA01','CAREERA02','CAREERA03','CAREERA04','CAREERA05',
-    'CAREERA06','CAREERA07','CAREERA08','CAREERA09','CAREERA10',
-    'LAUNCH2026','EARLYBIRD','PIONEER01','PIONEER02','PIONEER03',
-  ];
-  const envCodes = process.env.PROMO_CODES
-    ? process.env.PROMO_CODES.split(',').map(c => c.trim().toUpperCase()).filter(Boolean)
-    : [];
-  const codes = envCodes.length ? envCodes : defaults;
-  const map = new Map();
-  for (const code of codes) map.set(code, { used: false, usedAt: null });
-  console.log(`[promo] ${map.size} promo codes loaded:`, [...map.keys()].join(', '));
-  return map;
-})();
+// ─── One-time promo codes (see promoCodes.js for defaults & PROMO_CODES env) ───
+const PROMO_CODE_MAP = createPromoMap();
+console.log(
+  `[promo] ${PROMO_CODE_MAP.size} promo codes loaded:`,
+  [...PROMO_CODE_MAP.entries()]
+    .map(([k, v]) => `${k} (${v.discountPercent}%)`)
+    .join(', '),
+);
 
 
 function parseAiJson(content) {
@@ -659,9 +653,42 @@ app.get('/api/generate-report', async (req, res) => {
 
 app.post('/api/create-checkout-session', async (req, res) => {
   try {
-    const { answers, variant, email, plan } = req.body || {};
+    const { answers, variant, email, plan, promoCode: rawPromo } = req.body || {};
 
     const SITE_URL = process.env.SITE_URL || 'https://careera.cc';
+
+    const baseReport = PRICE_REPORT_CENTS;
+    const baseReportCall = PRICE_REPORT_CALL_CENTS;
+    const base = plan === 'report-call' ? baseReportCall : baseReport;
+
+    const normalizedPromo = normalizePromoCode(typeof rawPromo === 'string' ? rawPromo : '');
+    let promoMeta = null;
+    let unitAmount = base;
+
+    if (normalizedPromo) {
+      const pEntry = PROMO_CODE_MAP.get(normalizedPromo);
+      if (!pEntry) {
+        return res.status(400).json({ success: false, error: 'Invalid promo code.' });
+      }
+      if (pEntry.used) {
+        return res.status(400).json({ success: false, error: 'This promo code has already been used.' });
+      }
+      const d = pEntry.discountPercent;
+      if (d === 100) {
+        return res.status(400).json({
+          success: false,
+          error: 'This code unlocks the report at no charge. Use “Apply” on the promo field — it does not use checkout.',
+        });
+      }
+      if (d !== 15 && d !== 25) {
+        return res.status(400).json({ success: false, error: 'This promo code cannot be used at checkout.' });
+      }
+      unitAmount = discountedCents(base, d);
+      if (unitAmount < 50) {
+        return res.status(400).json({ success: false, error: 'Discounted amount is below the minimum charge. Contact support.' });
+      }
+      promoMeta = { code: normalizedPromo, discountPercent: d };
+    }
 
     const lineItems = plan === 'report-call'
       ? [{
@@ -669,9 +696,11 @@ app.post('/api/create-checkout-session', async (req, res) => {
             currency: 'usd',
             product_data: {
               name: 'Leadership Report + 1:1 Coaching Session',
-              description: 'Personalised long-form PDF leadership report + 30-min 1-on-1 leadership strategy session',
+              description: promoMeta
+                ? `Personalised long-form PDF leadership report + 30-min 1-on-1 leadership strategy session (${promoMeta.discountPercent}% promo)`
+                : 'Personalised long-form PDF leadership report + 30-min 1-on-1 leadership strategy session',
             },
-            unit_amount: 9999,
+            unit_amount: unitAmount,
           },
           quantity: 1,
         }]
@@ -680,9 +709,11 @@ app.post('/api/create-checkout-session', async (req, res) => {
             currency: 'usd',
             product_data: {
               name: 'Leadership Growth Report',
-              description: 'Personalised long-form PDF leadership report with AI analysis, 6 competency scores, archetype profile, 90-day roadmap, habits blueprint, and evolution path',
+              description: promoMeta
+                ? `Personalised long-form PDF leadership report (${promoMeta.discountPercent}% promo)`
+                : 'Personalised long-form PDF leadership report with AI analysis, 6 competency scores, archetype profile, 90-day roadmap, habits blueprint, and evolution path',
             },
-            unit_amount: 2999,
+            unit_amount: unitAmount,
           },
           quantity: 1,
         }];
@@ -691,7 +722,10 @@ app.post('/api/create-checkout-session', async (req, res) => {
     if (email && TEST_EMAILS.has(email.toLowerCase().trim())) {
       const testSessionId = `test_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const SITE_URL = process.env.SITE_URL || 'https://careera.cc';
-      pendingSessions.set(testSessionId, { answers, variant, email, plan, isTest: true });
+      pendingSessions.set(testSessionId, {
+        answers, variant, email, plan, isTest: true,
+        promoCode: promoMeta?.code,
+      });
       return res.json({ url: `${SITE_URL}/success?session_id=${testSessionId}` });
     }
 
@@ -702,11 +736,17 @@ app.post('/api/create-checkout-session', async (req, res) => {
       line_items: lineItems,
       success_url: `${SITE_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${SITE_URL}/?cancelled=1`,
-      metadata: { plan: plan || 'report' },
+      metadata: {
+        plan: plan || 'report',
+        ...(promoMeta ? { promo_code: promoMeta.code, promo_discount: String(promoMeta.discountPercent) } : {}),
+      },
     });
 
     // Store answers keyed by Stripe session ID
-    pendingSessions.set(session.id, { answers, variant, email, plan });
+    pendingSessions.set(session.id, {
+      answers, variant, email, plan,
+      promoCode: promoMeta?.code,
+    });
 
     res.json({ url: session.url });
   } catch (error) {
@@ -735,7 +775,7 @@ app.post('/api/generate-report-paid', async (req, res) => {
     const stored = pendingSessions.get(session_id);
     if (!stored) return res.status(404).json({ success: false, error: 'Session data not found. Please contact support.' });
 
-    const { answers = {}, variant } = stored;
+    const { answers = {}, variant, promoCode: paidPromoCode } = stored;
     const questionAnswers = Object.entries(answers).map(([questionId, answer]) => ({
       questionId, answer: String(answer || ''),
     }));
@@ -753,6 +793,15 @@ app.post('/api/generate-report-paid', async (req, res) => {
 
     // Cache the buffer so the client can download via GET /api/download-report
     cachePdf(session_id, pdfBuffer, filename);
+
+    if (paidPromoCode) {
+      const pe = PROMO_CODE_MAP.get(paidPromoCode);
+      if (pe && !pe.used) {
+        pe.used = true;
+        pe.usedAt = new Date().toISOString();
+        console.log(`[promo] Checkout code marked used: ${paidPromoCode}`);
+      }
+    }
 
     pendingSessions.delete(session_id);
 
@@ -782,7 +831,7 @@ app.get('/api/download-report', (req, res) => {
     return res.status(410).json({ error: 'Download link has expired. Please refresh the page.' });
   }
 
-  const safeFilename = entry.filename.replace(/[^\w.\-]/g, '_');
+  const safeFilename = entry.filename.replace(/[^\w.-]/g, '_');
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
   res.setHeader('Content-Length', entry.buffer.length);
@@ -790,19 +839,52 @@ app.get('/api/download-report', (req, res) => {
   res.send(entry.buffer);
 });
 
-// Validate and redeem a one-time promo code — generates the full report for free.
+// Validate promo without side effects (for UI pricing)
+app.post('/api/validate-promo', (req, res) => {
+  const raw = req.body?.code;
+  const normalized = normalizePromoCode(typeof raw === 'string' ? raw : '');
+  if (!normalized) {
+    return res.status(400).json({ valid: false, error: 'Please enter a promo code.' });
+  }
+  const entry = PROMO_CODE_MAP.get(normalized);
+  if (!entry) {
+    return res.json({ valid: false, error: 'Invalid promo code. Double-check and try again.' });
+  }
+  if (entry.used) {
+    return res.json({ valid: false, error: 'This code has already been used.' });
+  }
+  const discountPercent = entry.discountPercent;
+  const report = { original: PRICE_REPORT_CENTS, discounted: discountedCents(PRICE_REPORT_CENTS, discountPercent) };
+  const reportCall = {
+    original: PRICE_REPORT_CALL_CENTS,
+    discounted: discountedCents(PRICE_REPORT_CALL_CENTS, discountPercent),
+  };
+  return res.json({
+    valid: true,
+    discountPercent,
+    prices: { report, reportCall },
+  });
+});
+
+// Redeem a 100%-off code only — generates the full report with no payment.
 app.post('/api/redeem-promo', async (req, res) => {
   req.setTimeout(120000);
   res.setTimeout(120000);
 
-  const { code, answers, variant } = req.body || {};
-  const normalized = (typeof code === 'string' ? code.trim().toUpperCase() : '');
+  const { code, answers } = req.body || {};
+  const normalized = normalizePromoCode(typeof code === 'string' ? code : '');
 
   if (!normalized) return res.status(400).json({ success: false, error: 'Please enter a promo code.' });
 
   const entry = PROMO_CODE_MAP.get(normalized);
   if (!entry) return res.status(400).json({ success: false, error: 'Invalid promo code. Double-check and try again.' });
   if (entry.used) return res.status(400).json({ success: false, error: 'This code has already been used.' });
+  if (entry.discountPercent !== 100) {
+    return res.status(400).json({
+      success: false,
+      error: `This code gives ${entry.discountPercent}% off. Complete checkout with the discounted price instead.`,
+    });
+  }
 
   // Mark used immediately to prevent concurrent redemption race condition
   entry.used = true;
